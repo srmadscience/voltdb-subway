@@ -1,4 +1,5 @@
 
+load classes ../jars/td.jar;
 
 file -inlinebatch END_OF_DDL
 
@@ -269,7 +270,7 @@ group by user_id;
 
 END_OF_DDL
 	
-load classes ../../td.jar;
+
 
 file -inlinebatch END_OF_PROC
 
