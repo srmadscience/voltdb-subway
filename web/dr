@@ -1,0 +1,39 @@
+function DrawTable(response, tableName, tableId) {
+    try {
+        var tables = response.results;
+        var hmt = tables[tableId];
+        var colcount = hmt.schema.length;
+
+        // the first time, initialize the table head
+        if ($(tableName+' thead tr').length == 0) {
+            var theadhtml = '<tr>';
+            for (var i=0; i<colcount; i++) {
+                theadhtml += '<th>' + hmt.schema[i].name + '</th>';
+            }
+            $(tableName).append('<thead></thead>');
+            $(tableName).append('<tbody></tbody>');
+            $(tableName).children('thead').html(theadhtml);
+        }
+
+        var tbodyhtml;
+        for(var r=0;r<hmt.data.length;r++){ // for each row
+            tbodyhtml += '<tr>';
+            for (var c=0;c<colcount;c++) { // for each column
+                var f = hmt.data[r][c];
+
+                // if type is DECIMAL
+                if (hmt.schema[c].type == 22 || hmt.schema[c].type == 8) {
+                    f = formatDecimal(f);
+                }
+
+                if (hmt.schema[c].type == 11) {
+                    f = formatDateAsTime(f);
+                }
+                tbodyhtml += '<td>' + f + '</td>';
+            }
+            tbodyhtml += '</tr>';
+        }
+        $(tableName).children('tbody').html(tbodyhtml);
+
+    } catch(x) {}
+}
