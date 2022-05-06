@@ -7,7 +7,7 @@ do
  	cat $i >> Nov09JnyExport.csv
 done
 
-sh createTestDataMidnightFix.sh
+sh createTestDataMidnightFix.sh > /dev/null
 sh assembleCsvFileByDay.sh	
 
 split -l 400000 subwaytestfullweek.csv subwaytestfullweek.csv.

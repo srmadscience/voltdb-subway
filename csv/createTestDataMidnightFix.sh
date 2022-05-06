@@ -27,7 +27,7 @@ grep -v Unstarted $INPUTFILE | grep -v Unfinished | sed '1,$s/\"//'g > $INPUTFIL
 
 EVENTNO=1
 
-rm subwaytest_unsortedday.csv
+rm subwaytest_unsortedday.csv 2> /dev/null
 
 while IFS='' read -r line || [[ -n "$line" ]]; do
 
