@@ -275,8 +275,8 @@ END_OF_DDL
 file -inlinebatch END_OF_PROC
 
  
-CREATE PROCEDURE 
-   FROM CLASS trandemo.server.ResetData;
+--CREATE PROCEDURE 
+--  FROM CLASS trandemo.server.ResetData;
    
 CREATE PROCEDURE 
    FROM CLASS trandemo.server.DashBoard;

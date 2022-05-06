@@ -1,0 +1,4 @@
+<topics enabled="true">
+<topic name="kv_deltas"/>
+<topic name="accepted_transactions"/>
+</topics>

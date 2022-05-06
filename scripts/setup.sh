@@ -1,5 +1,16 @@
 #!/bin/sh
 
+cd /home/ubuntu
+. ./.profile
+
+cd voltdb-subway/ddl
+
+sqlcmd --servers=vdb1 < transportDemoSchema.sql
+
+cd ../ascripts
+
+java -jar $HOME/bin/addtodeploymentdotxml.jar vdb1 deployment topics.xml
+
 cd ../csv
 
 rm subwaytestfullweek.csv 2> /dev/null
