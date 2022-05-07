@@ -275,8 +275,8 @@ END_OF_DDL
 file -inlinebatch END_OF_PROC
 
  
---CREATE PROCEDURE 
---  FROM CLASS trandemo.server.ResetData;
+CREATE PROCEDURE 
+  FROM CLASS trandemo.server.LoadJSONArray;
    
 CREATE PROCEDURE 
    FROM CLASS trandemo.server.DashBoard;
@@ -304,15 +304,6 @@ CREATE PROCEDURE
    
 create procedure  FROM CLASS trandemo.server.MeasureThroughput;
 
-CREATE PROCEDURE ResetData AS
-BEGIN
-DELETE FROM STATION;
---DELETE FROM PRODUCTS;
---DELETE FROM SUBSYSTEMS;
---DELETE FROM JOURNEYS;
---DELETE FROM BUSRIDES;
---DELETE FROM SUBWAY_RIDES;
-END;
 
 
 END_OF_PROC
