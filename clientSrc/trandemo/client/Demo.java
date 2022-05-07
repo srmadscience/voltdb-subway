@@ -106,7 +106,7 @@ public class Demo {
             throws IOException, NoConnectionsException, ProcCallException, InterruptedException {
         
         msg("Reset Database Starting...");
-        ClientResponse cr = mainClient.callProcedure("ResetData");
+        ClientResponse cr = mainClient.callProcedure("LoadJSONArray");
         msg("Reset Database Finished.");
         msg(cr.getAppStatusString());
 

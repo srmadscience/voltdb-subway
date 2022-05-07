@@ -7,7 +7,7 @@ cd voltdb-subway/ddl
 
 sqlcmd --servers=vdb1 < transportDemoSchema.sql
 
-cd ../ascripts
+cd ../scripts
 
 java -jar $HOME/bin/addtodeploymentdotxml.jar vdb1 deployment topics.xml
 
