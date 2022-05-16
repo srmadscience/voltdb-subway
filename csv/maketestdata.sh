@@ -15,3 +15,5 @@ sh assembleCsvFileByDay.sh
 split -l 400000 subwaytestfullweek.csv subwaytestfullweek.csv.
 
 gzip Nov09JnyExport.csv.a?
+gzip subwaytestfullweek.csv.??
+rm subwaytestfullweek.csv
