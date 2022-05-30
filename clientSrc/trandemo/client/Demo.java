@@ -47,6 +47,7 @@ import trandemo.server.ReferenceData;
 
 public class Demo {
 
+    private static final long TWENTY_SECONDS_MS = 20 * 1000;
     SimpleDateFormat df1 = new SimpleDateFormat("yyyy-MM-dd");
     SimpleDateFormat parseFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm");
     final String dayOfYear = df1.format(new Date(System.currentTimeMillis()));
@@ -106,7 +107,7 @@ public class Demo {
             throws IOException, NoConnectionsException, ProcCallException, InterruptedException {
         
         msg("Reset Database Starting...");
-        ClientResponse cr = mainClient.callProcedure("LoadJSONArray");
+        ClientResponse cr = mainClient.callProcedure("ResetDatabase");
         msg("Reset Database Finished.");
         msg(cr.getAppStatusString());
 
@@ -153,7 +154,7 @@ public class Demo {
      * @return How nany events we did.
      */
     public int load(int weeks, int tpmsOrSpeedup,  boolean isTps) {
-
+        
         long currentTpmsOrSpeedup = tpmsOrSpeedup;
         boolean currentIsTps = isTps;
 
@@ -263,6 +264,11 @@ public class Demo {
                                 }
                                 lastTimeSeen = tripDate;
                                 startOfThisMinute = System.currentTimeMillis();
+                                
+                                    ComplainOnErrorCallback coec = new ComplainOnErrorCallback();
+                                    mainClient.callProcedure(coec, "DashBoard2", 10);
+                             
+
 
                             }
 
@@ -347,8 +353,10 @@ public class Demo {
                             currentMs = System.currentTimeMillis();
                             transThisMs = 0;
                         }
+                        
 
                     }
+
 
                     br.close();
                     fr.close();

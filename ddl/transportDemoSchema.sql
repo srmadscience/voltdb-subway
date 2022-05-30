@@ -143,7 +143,7 @@ PARTITION ON COLUMN user_id EXPORT TO TARGET tgt_uto
 	
 
 CREATE view latest_subway_start_by_min AS
-SELECT max(truncate(minute, active_subway_event_start)) event_time, count(*)
+SELECT max(truncate(minute, active_subway_event_start)) event_time, count(*) starts_this_min
 FROM   transport_user
 WHERE active_subway_event IS NOT NULL;
 
@@ -266,6 +266,12 @@ select user_id, count(*) how_many, max(event_timestamp) latest_event
 from transport_user_fraud_event
 group by user_id;
 
+CREATE TABLE sim_stats
+(stat_name varchar(1024) not null 
+,stat_label_1 varchar(50)
+,stat_label_2 varchar(50)
+,stat_value bigint not null
+,primary key(stat_name,stat_label_1,stat_label_2));
 
 
 END_OF_DDL
@@ -276,10 +282,10 @@ file -inlinebatch END_OF_PROC
 
  
 CREATE PROCEDURE 
-  FROM CLASS trandemo.server.LoadJSONArray;
+  FROM CLASS trandemo.server.ResetDatabase;
    
 CREATE PROCEDURE 
-   FROM CLASS trandemo.server.DashBoard;
+   FROM CLASS trandemo.server.DashBoard2;
 
 CREATE PROCEDURE 
    FROM CLASS trandemo.server.UpdateSimulationTime;
@@ -303,6 +309,55 @@ CREATE PROCEDURE
    FROM CLASS trandemo.server.QueryUser;
    
 create procedure  FROM CLASS trandemo.server.MeasureThroughput;
+
+CREATE PROCEDURE ReportStats__promBL AS
+BEGIN
+--
+select 'tps_or_speed' statname
+     ,  'tps_or_speed' stathelp  
+     , tps_or_speed statvalue 
+from simulation_speed order by statvalue;
+--
+select 'number_value' statname
+     ,  'number_value' stathelp  
+     , number_value statvalue 
+from simulation_speed order by statvalue;
+--
+select 'current_users' statname
+     ,  'current_users' stathelp  
+     ,  how_many statvalue
+from active_subway_users 
+order by how_many, latest_activity;
+--
+select stat_name statname
+     ,  stat_name stathelp  
+     ,  stat_value statvalue
+from sim_stats 
+where stat_label_1 is null
+and   stat_label_2 is null
+order by stat_name;
+--
+select stat_name statname
+     , stat_label_1
+     ,  stat_name stathelp  
+     ,  stat_value statvalue
+from sim_stats 
+where stat_label_1 is not null 
+and   stat_label_2 is null
+order by stat_name,stat_label_1;
+--
+select stat_name statname
+     , stat_label_1
+     , stat_label_2
+     ,  stat_name stathelp  
+     ,  stat_value statvalue
+from sim_stats 
+where stat_label_1 is not  null
+and   stat_label_2 is not null
+order by stat_name,stat_label_1, stat_label_2;
+--
+
+END;
 
 
 
