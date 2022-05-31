@@ -19,7 +19,9 @@ import org.voltdb.client.NoConnectionsException;
 import org.voltdb.client.ProcCallException;
 import org.voltdb.types.TimestampType;
 import org.voltdb.voltutil.stats.SafeHistogramCache;
+import org.voltdb.voltutil.stats.StatsHistogram;
 
+import trandemo.server.DashBoard2;
 import trandemo.server.ReferenceData;
 
 /* This file is part of VoltDB.
@@ -52,30 +54,31 @@ public class Demo {
     SimpleDateFormat parseFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm");
     final String dayOfYear = df1.format(new Date(System.currentTimeMillis()));
 
-    // We use two clients - for various reasons 
+    // We use two clients - for various reasons
     // Callbacks need their own connection
     Client mainClient = null;
     Client callbackClient = null;
-    
-    
+
     // Input text file path.
     String filename = null;
-    
-    // How many users we have. For simple 
+
+    // How many users we have. For simple
     int howMany = 1;
     int maxRowsPerFile = 0;
 
     /**
-     * Run a demo that uses real subway system data to show VoltDB's
-     * OLTP and HTAP capabilities.
+     * Run a demo that uses real subway system data to show VoltDB's OLTP and HTAP
+     * capabilities.
+     * 
      * @param hostnames list of voltDB servers, comma delimited.
-     * @param filename input filename. Normally 'subwaytestfullweek.csv'
-     * @param howMany How many users the system has. subwaytestfullweek.csv
-     * has 2,533,405 events, and we map users to events by dividing the userId 
-     * into the eventId. So if howMany is 1,000,000 each user will make around 
-     * 2.53 trips per day. Reducing the number of users increases contention
-     * for access to the users balance, and the likelyhood they will be called
-     * out for being on two trains at once.
+     * @param filename  input filename. Normally 'subwaytestfullweek.csv'
+     * @param howMany   How many users the system has. subwaytestfullweek.csv has
+     *                  2,533,405 events, and we map users to events by dividing the
+     *                  userId into the eventId. So if howMany is 1,000,000 each
+     *                  user will make around 2.53 trips per day. Reducing the
+     *                  number of users increases contention for access to the users
+     *                  balance, and the likelyhood they will be called out for
+     *                  being on two trains at once.
      */
     public Demo(String hostnames, String filename, int howMany) {
 
@@ -92,12 +95,12 @@ public class Demo {
         this.howMany = howMany;
     }
 
-  
     /**
      * Reset function
+     * 
      * @param howMany How any users to create.
-     * @param credit How much money, in pennies, they should each start with.
-     * @param tpMs How many transactions per millisecond we should do.
+     * @param credit  How much money, in pennies, they should each start with.
+     * @param tpMs    How many transactions per millisecond we should do.
      * @throws IOException
      * @throws NoConnectionsException
      * @throws ProcCallException
@@ -105,56 +108,64 @@ public class Demo {
      */
     private void reset(long howMany, long credit, int tpMs)
             throws IOException, NoConnectionsException, ProcCallException, InterruptedException {
-        
-        msg("Reset Database Starting...");
-        ClientResponse cr = mainClient.callProcedure("ResetDatabase");
-        msg("Reset Database Finished.");
-        msg(cr.getAppStatusString());
 
-        ComplainOnErrorCallback iuCallback = new ComplainOnErrorCallback();
+        ClientResponse cr = mainClient.callProcedure("@AdHoc", "SELECT COUNT(*) how_many FROM transport_user;");
+        cr.getResults()[0].advanceRow();
+        long actualUserCount = cr.getResults()[0].getLong("HOW_MANY");
 
-        msg("Creating " + howMany + " users each with credit of " + credit);
+        if (true || actualUserCount < howMany) { //TODO
 
-        long currentMs = System.currentTimeMillis();
-        int tpThisMs = 0;
-        final TimestampType startRun = new TimestampType (new Date(System.currentTimeMillis()));
+            msg("Reset Database Starting...");
+            cr = mainClient.callProcedure("ResetDatabase");
+            msg("Reset Database Finished.");
+            msg(cr.getAppStatusString());
 
-        for (int i = 0; i < howMany; i++) {
+            ComplainOnErrorCallback iuCallback = new ComplainOnErrorCallback();
 
-            if (tpThisMs++ > tpMs) {
+            msg("Creating " + howMany + " users each with credit of " + credit);
 
-                while (currentMs == System.currentTimeMillis()) {
-                    Thread.sleep(0, 50000);
+            long currentMs = System.currentTimeMillis();
+            int tpThisMs = 0;
+            final TimestampType startRun = new TimestampType(new Date(System.currentTimeMillis()));
+
+            for (int i = 0; i < howMany; i++) {
+
+                if (tpThisMs++ > tpMs) {
+
+                    while (currentMs == System.currentTimeMillis()) {
+                        Thread.sleep(0, 50000);
+                    }
+
+                    currentMs = System.currentTimeMillis();
+                    tpThisMs = 0;
                 }
 
-                currentMs = System.currentTimeMillis();
-                tpThisMs = 0;
-            }
+                mainClient.callProcedure(iuCallback, "UpdateCard", i, credit, "Y", startRun);
 
-             mainClient.callProcedure(iuCallback, "UpdateCard", i, credit, "Y",startRun);
+                if (i % 10000 == 1) {
+                    msg("Created " + i + " users...");
 
-            if (i % 10000 == 1) {
-                msg("Created " + i + " users...");
+                }
 
             }
+            msg("Finished queueing requests to create " + howMany + " users...");
 
+            mainClient.drain();
+            msg("All requests done...");
         }
-        msg("Finished queueing requests to create " + howMany + " users...");
-
-        mainClient.drain();
-        msg("All requests done...");
     }
 
     /**
-     * Load 'weeks' worth of data. 
-     * @param weeks How many weeks.
-     * @param tpmsOrSpeedup Value for transactions per millisecond or speedup from reality,
-     * as specified by isTps.
-     * @param isTps 'true' if we are trying to run at a specific tps.
+     * Load 'weeks' worth of data.
+     * 
+     * @param weeks         How many weeks.
+     * @param tpmsOrSpeedup Value for transactions per millisecond or speedup from
+     *                      reality, as specified by isTps.
+     * @param isTps         'true' if we are trying to run at a specific tps.
      * @return How nany events we did.
      */
-    public int load(int weeks, int tpmsOrSpeedup,  boolean isTps) {
-        
+    public int load(int weeks, int tpmsOrSpeedup, boolean isTps) {
+
         long currentTpmsOrSpeedup = tpmsOrSpeedup;
         boolean currentIsTps = isTps;
 
@@ -238,25 +249,25 @@ public class Demo {
 
                                 ClientResponse updateTimeResponse = mainClient.callProcedure("UpdateSimulationTime",
                                         tripDate);
-                                
+
                                 // See if speed has changed...
                                 VoltTable speedTable = updateTimeResponse.getResults()[2];
                                 speedTable.advanceRow();
-                                
-                                if (currentIsTps &&  speedTable.getString("TPS_OR_SPEED").equals("SPEED") ) {
+
+                                if (currentIsTps && speedTable.getString("TPS_OR_SPEED").equals("SPEED")) {
                                     msg("Simulation Mode changed to SPEED");
                                     currentIsTps = false;
                                 }
 
-                                if (( !currentIsTps)  &&  speedTable.getString("TPS_OR_SPEED").equals("TPS") ) {
+                                if ((!currentIsTps) && speedTable.getString("TPS_OR_SPEED").equals("TPS")) {
                                     msg("Simulation Mode changed to TPS");
                                     currentIsTps = true;
                                 }
 
                                 if (currentTpmsOrSpeedup != speedTable.getLong("NUMBER_VALUE")) {
-                                    currentTpmsOrSpeedup =  speedTable.getLong("NUMBER_VALUE");
+                                    currentTpmsOrSpeedup = speedTable.getLong("NUMBER_VALUE");
                                     msg("Simulation Speed changed to " + currentTpmsOrSpeedup);
-                                    
+
                                 }
 
                                 if (lineContents[1].endsWith(":00")) {
@@ -264,11 +275,11 @@ public class Demo {
                                 }
                                 lastTimeSeen = tripDate;
                                 startOfThisMinute = System.currentTimeMillis();
-                                
-                                    ComplainOnErrorCallback coec = new ComplainOnErrorCallback();
-                                    mainClient.callProcedure(coec, "DashBoard2", 10);
-                             
 
+                                double[] clientStats = getAndStoreClientLatencyStats(shc);
+                                double[] serverStats = getAndStoreServerLatencyStats();
+
+                                mainClient.callProcedure("DashBoard2", 10, clientStats, serverStats);
 
                             }
 
@@ -285,7 +296,7 @@ public class Demo {
                                     // Mon,04:32,BUSTRIP,893179,LTB,PPY,N,100,100,59,PAYG
 
                                     String jnytyp = lineContents[5];
-                                    //String capped = lineContents[6];
+                                    // String capped = lineContents[6];
                                     String busroute = lineContents[9];
                                     String product = lineContents[10];
 
@@ -302,7 +313,6 @@ public class Demo {
                                     // Mon,05:00,BEGINTRIP,897290,LUL,Morden
 
                                     String startStation = lineContents[5].trim();
-                                   
 
                                     CardSwipeCallback cwbc = new CardSwipeCallback(callbackClient, userId, eventId,
                                             tripType, tripDate, subsystem, "", startStation, "", "");
@@ -334,7 +344,6 @@ public class Demo {
 
                         // msg(line);
 
-  
                         //
                         // Limit how often we speak to the database to avoid
                         // swamping it...
@@ -353,10 +362,8 @@ public class Demo {
                             currentMs = System.currentTimeMillis();
                             transThisMs = 0;
                         }
-                        
 
                     }
-
 
                     br.close();
                     fr.close();
@@ -383,6 +390,50 @@ public class Demo {
 
         }
         return maxEventCount;
+
+    }
+
+    private double[] getAndStoreServerLatencyStats() throws NoConnectionsException, IOException, ProcCallException {
+
+        double[] result = new double[DashBoard2.SERVER_LATENCY_PERCENTILES.length];
+
+        ClientResponse cr = mainClient.callProcedure("@Statistics", "PROCEDURE", 0);
+
+        VoltTable stats = cr.getResults()[0];
+
+        while (stats.advanceRow()) {
+
+         
+            if (stats.getString("PROCEDURE").endsWith(".CardSwipe")) {
+
+                for (int i = 0; i < DashBoard2.SERVER_LATENCY_PERCENTILES.length; i++) {
+                    result[i] = stats.getLong(DashBoard2.SERVER_LATENCY_PERCENTILES[i]);
+                }
+                
+                break;
+            }
+
+            
+        }
+
+        return result;
+    }
+
+    private double[] getAndStoreClientLatencyStats(SafeHistogramCache shc) {
+
+        double[] result = new double[DashBoard2.LATENCY_PERCENTILES.length];
+
+        StatsHistogram wallTime = shc.get("WALL_TIME_OK");
+
+        if (wallTime != null) {
+
+            for (int i = 0; i < DashBoard2.LATENCY_PERCENTILES.length; i++) {
+                result[i] = wallTime.getLatencyPct(DashBoard2.LATENCY_PERCENTILES[i]);
+            }
+
+        }
+
+        return result;
 
     }
 
@@ -494,7 +545,7 @@ public class Demo {
     }
 
     public static void msg(String message) {
-        
+
         SimpleDateFormat sdfDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Date now = new Date();
         String strDate = sdfDate.format(now);
@@ -536,7 +587,7 @@ public class Demo {
     }
 
     private void closeClients() {
- 
+
         try {
             mainClient.close();
         } catch (InterruptedException e) {
@@ -549,10 +600,8 @@ public class Demo {
             Demo.msg(e.getMessage());
         }
 
-
     }
 
- 
     public static void main(String[] args) {
 
         try {

@@ -32,7 +32,7 @@ public class ResetDatabase extends VoltProcedure {
     // @formatter:off
 
     public static final SQLStmt deleteProducts = new SQLStmt("DELETE FROM products;");
-    public static final SQLStmt deleteStations = new SQLStmt("DELETE FROM station;");
+    //public static final SQLStmt deleteStations = new SQLStmt("DELETE FROM station;");
     public static final SQLStmt deleteSubsystems = new SQLStmt("DELETE FROM subsystem;");
     public static final SQLStmt deleteBusroutes = new SQLStmt("DELETE FROM busroutes;");
     public static final SQLStmt deleteUser = new SQLStmt("DELETE FROM transport_user;");
@@ -49,9 +49,9 @@ public class ResetDatabase extends VoltProcedure {
     public static final SQLStmt insertProducts = new SQLStmt("INSERT INTO products VALUES (?);");
     public static final SQLStmt insertEventCodes = new SQLStmt("INSERT INTO event_code (code, code_desc) VALUES (?,?);");
     public static final SQLStmt insertBusRoutes = new SQLStmt("INSERT INTO busroutes VALUES (?);");
-    public static final SQLStmt insertStations = new SQLStmt("INSERT INTO station VALUES (?);");
+    public static final SQLStmt insertStations = new SQLStmt("UPSERT INTO station (station_name) VALUES (?);");
     public static final SQLStmt insertSubsystem = new SQLStmt("INSERT INTO subsystem VALUES (?,?);");
-
+    
     // @formatter:on
 
     StringBuffer statusString = null;
@@ -127,7 +127,7 @@ public class ResetDatabase extends VoltProcedure {
     private void deleteAll() {
 
         voltQueueSQL(deleteProducts);
-        voltQueueSQL(deleteStations);
+       // voltQueueSQL(deleteStations);
         voltQueueSQL(deleteSubsystems);
         voltQueueSQL(deleteBusroutes);
         voltQueueSQL(deleteUser);

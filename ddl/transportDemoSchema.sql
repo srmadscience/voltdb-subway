@@ -23,7 +23,11 @@ create table event_code
 ,code_desc varchar(80) NOT NULL);
 
 CREATE TABLE station
-(station_name VARCHAR(30) PRIMARY KEY);
+(station_name VARCHAR(30) PRIMARY KEY
+,latitude     float
+,longitude    float
+,station_zone varchar(3)
+,postcode     varchar(8));
 
 CREATE TABLE busroutes
 (route_id VARCHAR(10) PRIMARY KEY);
@@ -260,6 +264,9 @@ group by user_id;
 
 create index tub_idx1 on transport_user_balance(user_id, last_event);
 
+
+
+
 	
 create view transport_user_fraud_status as
 select user_id, count(*) how_many, max(event_timestamp) latest_event
@@ -270,6 +277,8 @@ CREATE TABLE sim_stats
 (stat_name varchar(1024) not null 
 ,stat_label_1 varchar(50)
 ,stat_label_2 varchar(50)
+,latitude float
+,longitude float
 ,stat_value bigint not null
 ,primary key(stat_name,stat_label_1,stat_label_2));
 
@@ -283,6 +292,9 @@ file -inlinebatch END_OF_PROC
  
 CREATE PROCEDURE 
   FROM CLASS trandemo.server.ResetDatabase;
+
+CREATE PROCEDURE 
+  FROM CLASS trandemo.server.UpdateStation;
    
 CREATE PROCEDURE 
    FROM CLASS trandemo.server.DashBoard2;
@@ -313,15 +325,15 @@ create procedure  FROM CLASS trandemo.server.MeasureThroughput;
 CREATE PROCEDURE ReportStats__promBL AS
 BEGIN
 --
-select 'tps_or_speed' statname
-     ,  'tps_or_speed' stathelp  
-     , tps_or_speed statvalue 
-from simulation_speed order by statvalue;
+select 'speed' statname
+     ,  'speed' stathelp  
+     ,  decode(tps_or_speed,'SPEED',number_value,0) statvalue   
+from simulation_speed order by  decode(tps_or_speed,'SPEED',number_value,0);
 --
-select 'number_value' statname
-     ,  'number_value' stathelp  
-     , number_value statvalue 
-from simulation_speed order by statvalue;
+select 'tps' statname
+     ,  'tps' stathelp  
+     ,  decode(tps_or_speed,'TPS',number_value,0) statvalue   
+from simulation_speed order by decode(tps_or_speed,'TPS',number_value,0) ;
 --
 select 'current_users' statname
      ,  'current_users' stathelp  
@@ -339,6 +351,8 @@ order by stat_name;
 --
 select stat_name statname
      , stat_label_1
+          , latitude
+     , longitude
      ,  stat_name stathelp  
      ,  stat_value statvalue
 from sim_stats 
@@ -349,7 +363,9 @@ order by stat_name,stat_label_1;
 select stat_name statname
      , stat_label_1
      , stat_label_2
-     ,  stat_name stathelp  
+      , latitude
+     , longitude
+    ,  stat_name stathelp  
      ,  stat_value statvalue
 from sim_stats 
 where stat_label_1 is not  null
@@ -358,7 +374,6 @@ order by stat_name,stat_label_1, stat_label_2;
 --
 
 END;
-
 
 
 END_OF_PROC

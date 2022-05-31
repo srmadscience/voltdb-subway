@@ -1,7 +1,15 @@
 #!/bin/sh
 
 cd /home/ubuntu
+
+sudo cat 127.0.0.1 vdb1 >> /etc/hosts
+
+echo vdb1 > .vdbhostnames  
+
 . ./.profile
+
+cd bin
+sh prometheusserver_configure.sh
 
 cd voltdb-subway/ddl
 
@@ -22,6 +30,9 @@ do
 	gzip subwaytestfullweek.csv.?${i}
 done
 
+sudo service grafana start 2> /dev/null
+sudo service  voltdbprometheusbl start 2> /dev/null
+sudo service  voltdbprometheus start 2> /dev/null
 
 
 
