@@ -91,7 +91,7 @@ public class CardSwipe extends VoltProcedure {
             "SELECT fare_in_pennies FROM subway_fares WHERE from_station_name = ? AND to_station_name = ?;");
 
     public static final SQLStmt reportMissingStationPair = new SQLStmt(
-            "INSERT INTO missing_subway_fares (from_station_name, to_station_name) VALUES (?,?);");
+            "INSERT INTO missing_subway_fares (id,from_station_name, to_station_name) VALUES (?,?,?);");
     
     public static final SQLStmt reportOutcome = new SQLStmt("INSERT INTO user_trip_outcomes (user_id, trip_time, outcome_code,outcome_message) VALUES (?,?,?,?);");
 
@@ -300,7 +300,7 @@ public class CardSwipe extends VoltProcedure {
             // See if enough credit exists
 
             String startStation = userRecord.getString("LAST_DEP_STATION");
-            long fareNeeded = getSubwayFare(startStation, locationStation);
+            long fareNeeded = getSubwayFare(userId,startStation, locationStation);
 
             if (currentBal < fareNeeded) {
 
@@ -449,7 +449,7 @@ public class CardSwipe extends VoltProcedure {
         voltExecuteSQL();
     }
 
-    private long getSubwayFare(String fromStation, String endStation) {
+    private long getSubwayFare(long userId, String fromStation, String endStation) {
 
         long fare = ReferenceData.DEFAULT_SUBWAY_FARE;
 
@@ -463,7 +463,7 @@ public class CardSwipe extends VoltProcedure {
 
         } else {
 
-            voltQueueSQL(reportMissingStationPair, fromStation, endStation);
+            voltQueueSQL(reportMissingStationPair, userId, fromStation, endStation);
             voltExecuteSQL();
 
         }

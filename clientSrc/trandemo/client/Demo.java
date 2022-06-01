@@ -113,7 +113,7 @@ public class Demo {
         cr.getResults()[0].advanceRow();
         long actualUserCount = cr.getResults()[0].getLong("HOW_MANY");
 
-        if (true || actualUserCount < howMany) { //TODO
+        if (true || actualUserCount < howMany) { // TODO
 
             msg("Reset Database Starting...");
             cr = mainClient.callProcedure("ResetDatabase");
@@ -192,7 +192,7 @@ public class Demo {
         long tpThisPerMs = currentTpmsOrSpeedup;
 
         if (!currentIsTps) {
-            tpThisPerMs = 50;
+            tpThisPerMs = 50; // TODO
         }
 
         for (int weekCount = 0; weekCount < weeks; weekCount++) {
@@ -241,8 +241,8 @@ public class Demo {
                                     long actualMsTaken = System.currentTimeMillis() - startOfThisMinute;
 
                                     if (actualMsTaken < officialMSToTake) {
-                                        // msg("Sleeping " +(officialMSToTake -
-                                        // actualMsTaken) + "ms" );
+//                                        msg("Sleeping " +(officialMSToTake -
+//                                        actualMsTaken) + "ms" );
                                         Thread.sleep(officialMSToTake - actualMsTaken);
                                     }
                                 }
@@ -279,7 +279,10 @@ public class Demo {
                                 double[] clientStats = getAndStoreClientLatencyStats(shc);
                                 double[] serverStats = getAndStoreServerLatencyStats();
 
+                                mainClient.drain();
                                 mainClient.callProcedure("DashBoard2", 10, clientStats, serverStats);
+
+                                shc.clear("WALL_TIME_OK");
 
                             }
 
@@ -355,7 +358,9 @@ public class Demo {
 
                             // Sleep until the MS has changed...
                             while (currentMs == System.currentTimeMillis()) {
-                                Thread.sleep(0, 50000);
+                                if (currentIsTps) {
+                                    Thread.sleep(0, 50000);
+                                }
                             }
 
                             // currentMs has changed...
@@ -403,17 +408,15 @@ public class Demo {
 
         while (stats.advanceRow()) {
 
-         
             if (stats.getString("PROCEDURE").endsWith(".CardSwipe")) {
 
                 for (int i = 0; i < DashBoard2.SERVER_LATENCY_PERCENTILES.length; i++) {
                     result[i] = stats.getLong(DashBoard2.SERVER_LATENCY_PERCENTILES[i]);
                 }
-                
+
                 break;
             }
 
-            
         }
 
         return result;

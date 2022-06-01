@@ -40,7 +40,10 @@ CREATE TABLE subway_fares
 ,CONSTRAINT sufr_pk PRIMARY KEY (from_station_name, to_station_name));
 
 CREATE STREAM missing_subway_fares
-(from_station_name VARCHAR(30) NOT NULL
+PARTITION ON COLUMN id 
+  EXPORT TO TOPIC missing_subway_fares_topic
+(id BIGINT NOT NULL
+,from_station_name VARCHAR(30) NOT NULL
 ,to_station_name VARCHAR(30) NOT NULL);
 
 CREATE TABLE transport_user 
@@ -91,7 +94,8 @@ CREATE INDEX edc_purge ON event_dup_check
 
 
 CREATE STREAM transport_user_fraud_event
-PARTITION ON COLUMN user_id EXPORT TO TARGET newfile
+PARTITION ON COLUMN user_id 
+  EXPORT TO TOPIC transport_user_fraud_event_topic
 	(user_id BIGINT NOT NULL 
 	,event_id BIGINT NOT NULL
 	,event_timestamp TIMESTAMP NOT NULL
@@ -100,7 +104,8 @@ PARTITION ON COLUMN user_id EXPORT TO TARGET newfile
 	
 	
 CREATE STREAM transport_user_financial_event
-PARTITION ON COLUMN user_id EXPORT TO TARGET newfile
+PARTITION ON COLUMN user_id 
+  EXPORT TO TOPIC transport_user_financial_event_topic
 	(user_id BIGINT NOT NULL 
 	,event_id BIGINT NOT NULL
 	,event_timestamp TIMESTAMP NOT NULL
@@ -138,7 +143,8 @@ create index tube_ix1 on transport_user_bus_event (event_timestamp,user_id, even
 
 
 create stream user_trip_outcomes
-PARTITION ON COLUMN user_id EXPORT TO TARGET tgt_uto
+PARTITION ON COLUMN user_id 
+  EXPORT TO TOPIC user_trip_outcomes_topic
 	(user_id BIGINT NOT NULL 
 	,trip_time TIMESTAMP NOT NULL
 	,outcome_code INT NOT NULL
@@ -279,7 +285,7 @@ CREATE TABLE sim_stats
 ,stat_label_2 varchar(50)
 ,latitude float
 ,longitude float
-,stat_value bigint not null
+,stat_value float not null
 ,primary key(stat_name,stat_label_1,stat_label_2));
 
 
@@ -351,13 +357,26 @@ order by stat_name;
 --
 select stat_name statname
      , stat_label_1
-          , latitude
+     ,  stat_name stathelp  
+     ,  stat_value statvalue
+from sim_stats 
+where stat_label_1 is not null 
+and   stat_label_2 is null
+and   latitude is  null 
+and   longitude is  null
+order by stat_name,stat_label_1;
+--
+select stat_name statname
+     , stat_label_1
+     , latitude
      , longitude
      ,  stat_name stathelp  
      ,  stat_value statvalue
 from sim_stats 
 where stat_label_1 is not null 
 and   stat_label_2 is null
+and   latitude is not null 
+and   longitude is not null
 order by stat_name,stat_label_1;
 --
 select stat_name statname
@@ -370,13 +389,36 @@ select stat_name statname
 from sim_stats 
 where stat_label_1 is not  null
 and   stat_label_2 is not null
+and   latitude is not null 
+and   longitude is not null
 order by stat_name,stat_label_1, stat_label_2;
 --
-
+select stat_name statname
+     , stat_label_1
+     , stat_label_2
+    ,  stat_name stathelp  
+     ,  stat_value statvalue
+from sim_stats 
+where stat_label_1 is not  null
+and   stat_label_2 is not null
+and   latitude is  null 
+and   longitude is  null
+order by stat_name,stat_label_1, stat_label_2;
+--
 END;
 
 
 END_OF_PROC
       
+
+drop view subway_starts_by_hour;
+
+drop view subway_activity_by_hour;
+
+drop view bus_event_by_hour;
+
+drop view bus_event_total_by_hour;
+
+
 file subwayfares.sql	
       

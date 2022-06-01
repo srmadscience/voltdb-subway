@@ -11,6 +11,7 @@ echo vdb1 > .vdbhostnames
 cd bin
 sh prometheusserver_configure.sh
 
+cd
 cd voltdb-subway/ddl
 
 sqlcmd --servers=vdb1 < transportDemoSchema.sql

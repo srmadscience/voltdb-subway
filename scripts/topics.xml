@@ -1,4 +1,6 @@
 <topics enabled="true">
-<topic name="kv_deltas"/>
-<topic name="accepted_transactions"/>
+<topic name="missing_subway_fares_topic"/>
+<topic name="transport_user_fraud_event_topic"/>
+<topic name="transport_user_financial_event_topic"/>
+<topic name="user_trip_outcomes_topic"/>
 </topics>

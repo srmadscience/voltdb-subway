@@ -26,18 +26,15 @@ package trandemo.server;
 import org.voltdb.SQLStmt;
 import org.voltdb.VoltProcedure;
 import org.voltdb.VoltTable;
-import org.voltdb.VoltType;
 import org.voltdb.types.TimestampType;
-
-import trandemo.client.Demo;
 
 public class DashBoard2 extends VoltProcedure {
 
  // @formatter:off
-  
+
     public static final SQLStmt deleteStats = new SQLStmt("DELETE FROM sim_stats;");
     public static final SQLStmt addStat = new SQLStmt("INSERT INTO sim_stats (stat_name,stat_label_1, stat_label_2, latitude, longitude, stat_value) VALUES (?,?,?,?,?,?);");
-       
+
     public static final SQLStmt getMaxTime = new SQLStmt("select   dateadd(minute, -60, simulation_time) st"
             + ",dateadd(minute, -1,simulation_time) latest_time"
             + ",  simulation_time et  "
@@ -59,39 +56,39 @@ public class DashBoard2 extends VoltProcedure {
     public static final SQLStmt getBusStartsPerMin = new SQLStmt("select * from bus_event_total_by_minute where event_minute between ? and ? order by event_minute desc limit ?;");
     public static final SQLStmt getBusiestStationPairs = new SQLStmt("SELECT start_station, end_station, sum(how_many) sum_how_many FROM subway_activity_by_minute "
             + "WHERE event_minute BETWEEN ? AND ? GROUP BY  start_station, end_station ORDER BY sum_how_many  DESC, start_station, end_station LIMIT ?; ");
-    
+
     public static final SQLStmt getBusiestBusRoutes = new SQLStmt("SELECT busroute, sum(how_many) sum_how_many "
             + "FROM bus_event_by_minute WHERE event_minute BETWEEN ? AND ? "
             + "GROUP BY busroute ORDER BY sum_how_many DESC, busroute  LIMIT ?; ");
-    
-    
+
+
    // public static final SQLStmt getTotalCredit = new SQLStmt("select sum(credit) total_credit_gbp from transport_user_balance;");
     public static final SQLStmt getbadOutcomes = new SQLStmt("select user_id, TRIP_TIME, OUTCOME_MESSAGE from trip_outcome_summary order by trip_time desc, user_id, outcome_code, outcome_message desc limit ?;");
- 
+
     public static final SQLStmt getSubwayStationBoardsPerMin = new SQLStmt("select start_station, sum(how_many) sum_how_many from subway_board_activity_by_minute  where event_minute between ? and ? group by start_station  order by  sum(how_many) desc,start_station limit ?;");
     public static final SQLStmt getSubwayStationEndsPerMin = new SQLStmt("select end_station, sum(how_many) sum_how_many from subway_finish_activity_by_minute  where event_minute between ? and ? group by end_station  order by  sum(how_many)  desc, end_station limit ?;");
-    
-    
+
+
     public static final SQLStmt getPurchases  = new SQLStmt("select nvl(sum(last_add_finevent_amount),0) Purchases from transport_user where truncate(minute,LAST_ADD_FINEVENT_DATE) = ? ");
     public static final SQLStmt getSpending = new SQLStmt("select nvl(sum(last_spend_finevent_amount),0) Spending from transport_user where truncate(minute,LAST_SPEND_FINEVENT_DATE) = ?");
-   
+
     public static final SQLStmt getBusiestStartStations = new SQLStmt("SELECT start_station station, sum(how_many) sum_how_many, latitude, longitude  "
             + "FROM subway_activity_by_minute, station "
             + "WHERE event_minute BETWEEN ? AND ? "
             + "AND start_station = station_name "
             + "GROUP BY  start_station, latitude, longitude  "
             + "ORDER BY sum_how_many  DESC, start_station LIMIT ?; ");
- 
+
     public static final SQLStmt getBusiestEndStations = new SQLStmt("SELECT end_station station, sum(how_many) sum_how_many, latitude, longitude  "
             + "FROM subway_activity_by_minute, station "
             + "WHERE event_minute BETWEEN ? AND ? "
             + "AND end_station = station_name "
             + "GROUP BY  end_station, latitude, longitude  "
             + "ORDER BY sum_how_many  DESC, end_station LIMIT ?; ");
- 
-    
- 
-    
+
+
+
+
     // @formatter:on
 
     public static final double[] LATENCY_PERCENTILES = { 50, 95, 99, 99.9, 99.99, 99.999, 100 };
@@ -136,8 +133,8 @@ public class DashBoard2 extends VoltProcedure {
 
         voltQueueSQL(getSimTime);
 
-        voltQueueSQL(getBusiestStartStations, currentStartMinute, currentEndMinute, howMany);
-        voltQueueSQL(getBusiestEndStations, currentStartMinute, currentEndMinute, howMany);
+        voltQueueSQL(getBusiestStartStations, currentStartMinute, currentEndMinute, howMany * 5);
+        voltQueueSQL(getBusiestEndStations, currentStartMinute, currentEndMinute, howMany * 5);
 
         VoltTable[] firstResults = voltExecuteSQL();
 
@@ -148,7 +145,7 @@ public class DashBoard2 extends VoltProcedure {
         addBusiestBusRoutes(firstResults[4]);
 
         addStat("subway_totals", "current_users", null, getValue("how_many", firstResults[5]));
-        // addStat("subway_totals","current_credit",null,getValue("total_credit_gbp",firstResults[6]));
+      
 
         addStat("subway_totals", "boards_per_minute", null, getValue("SUM_HOW_MANY", firstResults[6]));
         addStat("subway_totals", "ends_per_minute", null, getValue("SUM_HOW_MANY", firstResults[7]));
@@ -190,7 +187,7 @@ public class DashBoard2 extends VoltProcedure {
             double longitude = voltTable.getDouble("longitude");
             double latitude = voltTable.getDouble("latitude");
             long howMany = voltTable.getLong("sum_how_many");
-            addLatLongStat("busy_" + kind + "stations", station, null, longitude, latitude, howMany);
+            addLatLongStat("busy_" + kind + "stations", station, station, latitude, longitude, howMany);
         }
 
     }
@@ -208,7 +205,7 @@ public class DashBoard2 extends VoltProcedure {
         while (voltTable.advanceRow()) {
             String busRoute = voltTable.getString("busroute");
             long howMany = voltTable.getLong("sum_how_many");
-            addStat("busy_bus_routes", busRoute, null, howMany);
+            addStat("busy_bus_routes", "",busRoute, howMany);
         }
 
     }
@@ -236,7 +233,7 @@ public class DashBoard2 extends VoltProcedure {
     }
 
     private void addLatLongStat(String statName, String label1, String label2, double latitude, double longitude,
-            long statValue) {
+            double statValue) {
         voltQueueSQL(addStat, statName, label1, label2, latitude, longitude, statValue);
 
     }
