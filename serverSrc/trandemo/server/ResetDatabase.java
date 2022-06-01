@@ -31,7 +31,8 @@ public class ResetDatabase extends VoltProcedure {
 
     // @formatter:off
 
-    public static final SQLStmt deleteProducts = new SQLStmt("DELETE FROM products;");
+    public static final SQLStmt deleteProducts = new SQLStmt("DELETE FROM products ;");
+    
     //public static final SQLStmt deleteStations = new SQLStmt("DELETE FROM station;");
     public static final SQLStmt deleteSubsystems = new SQLStmt("DELETE FROM subsystem;");
     public static final SQLStmt deleteBusroutes = new SQLStmt("DELETE FROM busroutes;");
