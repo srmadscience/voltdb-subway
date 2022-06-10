@@ -49,7 +49,7 @@ import trandemo.server.ReferenceData;
 
 public class Demo {
 
-    private static final int DEFAULT_TPS_PER_MS = 50;
+    private static final int DEFAULT_TPS_PER_MS = 20;
     SimpleDateFormat df1 = new SimpleDateFormat("yyyy-MM-dd");
     SimpleDateFormat parseFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm");
     final String dayOfYear = df1.format(new Date(System.currentTimeMillis()));
@@ -375,7 +375,7 @@ public class Demo {
 
                         // If we've already done as many requests this ms
                         // as we're supposed to, sleep...
-                        if (++transThisMs > tpThisPerMs) {
+                        if (transThisMs++ > tpThisPerMs) {
 
                             // Sleep until the MS has changed...
                             while (currentMs == System.currentTimeMillis()) {
