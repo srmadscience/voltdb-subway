@@ -81,8 +81,9 @@ public class CardSwipe extends VoltProcedure {
             "INSERT INTO transport_user_fraud_event (user_id,event_id ,event_timestamp,event_comment) VALUES (?,?,?,?);");
 
     public static final SQLStmt logEvent = new SQLStmt(
-            "INSERT INTO transport_user_subway_event (user_id, event_id,event_timestamp,start_station, end_station, duration_seconds) "
-                    + "VALUES (?,?,?,?,?,?)");
+            "INSERT INTO transport_user_subway_event (user_id, event_id,event_timestamp"
+            + ",start_station, end_station, duration_seconds,subsystem_name) "
+                    + "VALUES (?,?,?,?,?,?,?)");
 
     public static final SQLStmt recordBusJourney = new SQLStmt(
             "INSERT INTO transport_user_bus_event (user_id, event_id,event_timestamp,busroute) " + "VALUES (?,?,?,?)");
@@ -318,7 +319,7 @@ public class CardSwipe extends VoltProcedure {
 
             long durationSecs = ((eventTime.getTime() / 1000) - tripStart) / 1000;
 
-            endSubwayEvent(userId, eventId, startStation, locationStation, durationSecs, eventTime);
+            endSubwayEvent(userId, eventId, startStation, locationStation, durationSecs, eventTime,subsystem);
 
             reportUserEvent(userId, eventId, ReferenceData.STATUS_OK, "Subway Exit OK", eventTime);
 
@@ -371,10 +372,10 @@ public class CardSwipe extends VoltProcedure {
     }
 
     private void endSubwayEvent(long userId, long eventId, String startStation, String locationStation,
-            long durationSecs, TimestampType eventTime) {
+            long durationSecs, TimestampType eventTime, String subsystem) {
 
         voltQueueSQL(updUserEndTrip, eventTime, locationStation, userId);
-        voltQueueSQL(logEvent, userId, eventId, eventTime, startStation, locationStation, durationSecs);
+        voltQueueSQL(logEvent, userId, eventId, eventTime, startStation, locationStation, durationSecs,subsystem);
         voltExecuteSQL();
 
     }

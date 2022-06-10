@@ -33,7 +33,7 @@ public class ResetDatabase extends VoltProcedure {
 
     public static final SQLStmt deleteProducts = new SQLStmt("DELETE FROM products ;");
     
-    //public static final SQLStmt deleteStations = new SQLStmt("DELETE FROM station;");
+   
     public static final SQLStmt deleteSubsystems = new SQLStmt("DELETE FROM subsystem;");
     public static final SQLStmt deleteBusroutes = new SQLStmt("DELETE FROM busroutes;");
     public static final SQLStmt deleteUser = new SQLStmt("DELETE FROM transport_user;");
@@ -59,7 +59,7 @@ public class ResetDatabase extends VoltProcedure {
 
     public VoltTable[] run() throws VoltAbortException {
 
-        statusString = new StringBuffer("LoadJSONArray: ");
+        statusString = new StringBuffer("ResetDatabase: ");
         deleteAll();
 
         // @formatter:off

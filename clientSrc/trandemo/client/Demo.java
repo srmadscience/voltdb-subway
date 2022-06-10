@@ -49,7 +49,7 @@ import trandemo.server.ReferenceData;
 
 public class Demo {
 
-    private static final long TWENTY_SECONDS_MS = 20 * 1000;
+    private static final int DEFAULT_TPS_PER_MS = 50;
     SimpleDateFormat df1 = new SimpleDateFormat("yyyy-MM-dd");
     SimpleDateFormat parseFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm");
     final String dayOfYear = df1.format(new Date(System.currentTimeMillis()));
@@ -106,53 +106,83 @@ public class Demo {
      * @throws ProcCallException
      * @throws InterruptedException
      */
+    private void createUsers(long howMany, long credit, int tpMs)
+            throws IOException, NoConnectionsException, ProcCallException, InterruptedException {
+
+        ComplainOnErrorCallback iuCallback = new ComplainOnErrorCallback();
+
+        msg("Creating " + howMany + " users each with credit of " + credit);
+
+        long currentMs = System.currentTimeMillis();
+        int tpThisMs = 0;
+        final TimestampType startRun = new TimestampType(new Date(System.currentTimeMillis()));
+
+        for (int i = 0; i < howMany; i++) {
+
+            if (tpThisMs++ > tpMs) {
+
+                while (currentMs == System.currentTimeMillis()) {
+                    Thread.sleep(0, 50000);
+                }
+
+                currentMs = System.currentTimeMillis();
+                tpThisMs = 0;
+            }
+
+            mainClient.callProcedure(iuCallback, "UpdateCard", i, credit, "Y", startRun);
+
+            if (i % 10000 == 1) {
+                msg("Created " + i + " users...");
+
+            }
+
+        }
+        msg("Finished queueing requests to create " + howMany + " users...");
+
+        mainClient.drain();
+        msg("All requests done...");
+
+    }
+    
+    private boolean hasTooFewUsers(long howMany) {
+        try {
+            ClientResponse cr  = mainClient.callProcedure("@AdHoc", "SELECT COUNT(*) how_many FROM transport_user");
+            cr.getResults()[0].advanceRow();
+            if (cr.getResults()[0].getLong("How_many") >= howMany) {
+                return false;
+            }
+        } catch (IOException | ProcCallException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return true;
+    }
+    
+    /**
+     * Reset function
+     * 
+     * @throws IOException
+     * @throws NoConnectionsException
+     * @throws ProcCallException
+     * @throws InterruptedException
+     */
     private void reset(long howMany, long credit, int tpMs)
             throws IOException, NoConnectionsException, ProcCallException, InterruptedException {
 
-        ClientResponse cr = mainClient.callProcedure("@AdHoc", "SELECT COUNT(*) how_many FROM transport_user;");
-        cr.getResults()[0].advanceRow();
-        long actualUserCount = cr.getResults()[0].getLong("HOW_MANY");
+        msg("Reset Database Starting...");
+        ClientResponse cr = mainClient.callProcedure("ResetDatabase");
+        msg("Reset Database Finished.");
+        msg(cr.getAppStatusString());
 
-        if (true || actualUserCount < howMany) { // TODO
+    }
 
-            msg("Reset Database Starting...");
-            cr = mainClient.callProcedure("ResetDatabase");
-            msg("Reset Database Finished.");
-            msg(cr.getAppStatusString());
+    private void freeSpace() throws IOException, NoConnectionsException, ProcCallException, InterruptedException {
 
-            ComplainOnErrorCallback iuCallback = new ComplainOnErrorCallback();
+        msg("Free Space Starting...");
+        mainClient.callProcedure("FreeSpace");
+        msg("Free Space Finished.");
+       
 
-            msg("Creating " + howMany + " users each with credit of " + credit);
-
-            long currentMs = System.currentTimeMillis();
-            int tpThisMs = 0;
-            final TimestampType startRun = new TimestampType(new Date(System.currentTimeMillis()));
-
-            for (int i = 0; i < howMany; i++) {
-
-                if (tpThisMs++ > tpMs) {
-
-                    while (currentMs == System.currentTimeMillis()) {
-                        Thread.sleep(0, 50000);
-                    }
-
-                    currentMs = System.currentTimeMillis();
-                    tpThisMs = 0;
-                }
-
-                mainClient.callProcedure(iuCallback, "UpdateCard", i, credit, "Y", startRun);
-
-                if (i % 10000 == 1) {
-                    msg("Created " + i + " users...");
-
-                }
-
-            }
-            msg("Finished queueing requests to create " + howMany + " users...");
-
-            mainClient.drain();
-            msg("All requests done...");
-        }
     }
 
     /**
@@ -178,7 +208,6 @@ public class Demo {
 
             }
         } catch (IOException | ProcCallException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
 
@@ -192,7 +221,7 @@ public class Demo {
         long tpThisPerMs = currentTpmsOrSpeedup;
 
         if (!currentIsTps) {
-            tpThisPerMs = 50; // TODO
+            tpThisPerMs = DEFAULT_TPS_PER_MS;
         }
 
         for (int weekCount = 0; weekCount < weeks; weekCount++) {
@@ -241,8 +270,6 @@ public class Demo {
                                     long actualMsTaken = System.currentTimeMillis() - startOfThisMinute;
 
                                     if (actualMsTaken < officialMSToTake) {
-//                                        msg("Sleeping " +(officialMSToTake -
-//                                        actualMsTaken) + "ms" );
                                         Thread.sleep(officialMSToTake - actualMsTaken);
                                     }
                                 }
@@ -259,7 +286,7 @@ public class Demo {
                                     currentIsTps = false;
                                 }
 
-                                if ((!currentIsTps) && speedTable.getString("TPS_OR_SPEED").equals("TPS")) {
+                                else if ((!currentIsTps) && speedTable.getString("TPS_OR_SPEED").equals("TPS")) {
                                     msg("Simulation Mode changed to TPS");
                                     currentIsTps = true;
                                 }
@@ -272,17 +299,17 @@ public class Demo {
 
                                 if (lineContents[1].endsWith(":00")) {
                                     msg("Time is : " + lineContents[1] + " eventcount=" + eventCount);
+
+                                    double[] clientStats = getAndStoreClientLatencyStats(shc);
+                                    double[] serverStats = getAndStoreServerLatencyStats();
+
+                                    mainClient.drain();
+                                    mainClient.callProcedure("DashBoard2", 10, clientStats, serverStats);
+
+                                    shc.clear("WALL_TIME_OK");
                                 }
                                 lastTimeSeen = tripDate;
                                 startOfThisMinute = System.currentTimeMillis();
-
-                                double[] clientStats = getAndStoreClientLatencyStats(shc);
-                                double[] serverStats = getAndStoreServerLatencyStats();
-
-                                mainClient.drain();
-                                mainClient.callProcedure("DashBoard2", 10, clientStats, serverStats);
-
-                                shc.clear("WALL_TIME_OK");
 
                             }
 
@@ -292,69 +319,63 @@ public class Demo {
                             long userId = (eventId) % howMany;
                             String subsystem = lineContents[4];
 
-                            if (eventId % 1 == 0) {
-                                if (tripType.equals(ReferenceData.BUS_EVENT)) {
+                            // if (eventId % 1 == 0) {
+                            if (tripType.equals(ReferenceData.BUS_EVENT)) {
 
-                                    // Example:
-                                    // Mon,04:32,BUSTRIP,893179,LTB,PPY,N,100,100,59,PAYG
+                                // Example:
+                                // Mon,04:32,BUSTRIP,893179,LTB,PPY,N,100,100,59,PAYG
 
-                                    String jnytyp = lineContents[5];
-                                    // String capped = lineContents[6];
-                                    String busroute = lineContents[9];
-                                    String product = lineContents[10];
+                                String jnytyp = lineContents[5];
+                                // String capped = lineContents[6];
+                                String busroute = lineContents[9];
+                                String product = lineContents[10];
 
-                                    CardSwipeCallback cwbc = new CardSwipeCallback(callbackClient, userId, eventId,
-                                            tripType, tripDate, subsystem, jnytyp, busroute, product, "");
-                                    mainClient.callProcedure(cwbc, "CardSwipe", userId, eventId, tripType, tripDate,
-                                            subsystem, "", "", jnytyp, busroute, product);
+                                CardSwipeCallback cwbc = new CardSwipeCallback(callbackClient, userId, eventId,
+                                        tripType, tripDate, subsystem, jnytyp, busroute, product, "");
+                                mainClient.callProcedure(cwbc, "CardSwipe", userId, eventId, tripType, tripDate,
+                                        subsystem, "", "", jnytyp, busroute, product);
 
-                                }
-
-                                else if (tripType.equals(ReferenceData.STARTSUBWAY_EVENT)) {
-
-                                    // Example:
-                                    // Mon,05:00,BEGINTRIP,897290,LUL,Morden
-
-                                    String startStation = lineContents[5].trim();
-
-                                    CardSwipeCallback cwbc = new CardSwipeCallback(callbackClient, userId, eventId,
-                                            tripType, tripDate, subsystem, "", startStation, "", "");
-                                    mainClient.callProcedure(cwbc, "CardSwipe", userId, eventId, tripType, tripDate,
-                                            subsystem, startStation, "", "", "", "");
-
-                                } else if (tripType.equals(ReferenceData.ENDSUBWAY_EVENT)) {
-
-                                    // Example:
-                                    // Mon,05:26,ENDTRIP,897114,LUL,Westminster,Z0102,TKT,N,0,0,LUL
-                                    // Travelcard-Annual
-
-                                    String endStation = lineContents[5].trim();
-                                    String zvppt = lineContents[6];
-                                    String jnytyp = lineContents[7];
-                                    String product = lineContents[9];
-
-                                    CardSwipeCallback cwbc = new CardSwipeCallback(callbackClient, userId, eventId,
-                                            tripType, tripDate, subsystem, jnytyp, endStation, product, zvppt);
-                                    mainClient.callProcedure(cwbc, "CardSwipe", userId, eventId, tripType, tripDate,
-                                            subsystem, endStation, zvppt, jnytyp, "", product);
-
-                                }
                             }
+
+                            else if (tripType.equals(ReferenceData.STARTSUBWAY_EVENT)) {
+
+                                // Example:
+                                // Mon,05:00,BEGINTRIP,897290,LUL,Morden
+
+                                String startStation = lineContents[5].trim();
+
+                                CardSwipeCallback cwbc = new CardSwipeCallback(callbackClient, userId, eventId,
+                                        tripType, tripDate, subsystem, "", startStation, "", "");
+                                mainClient.callProcedure(cwbc, "CardSwipe", userId, eventId, tripType, tripDate,
+                                        subsystem, startStation, "", "", "", "");
+
+                            } else if (tripType.equals(ReferenceData.ENDSUBWAY_EVENT)) {
+
+                                // Example:
+                                // Mon,05:26,ENDTRIP,897114,LUL,Westminster,Z0102,TKT,N,0,0,LUL
+                                // Travelcard-Annual
+
+                               
+                                String endStation = lineContents[5].trim();
+                                String zvppt = lineContents[6];
+                                String jnytyp = lineContents[7];
+                                String product = lineContents[9];
+
+                                CardSwipeCallback cwbc = new CardSwipeCallback(callbackClient, userId, eventId,
+                                        tripType, tripDate, subsystem, jnytyp, endStation, product, zvppt);
+                                mainClient.callProcedure(cwbc, "CardSwipe", userId, eventId, tripType, tripDate,
+                                        subsystem, endStation, zvppt, jnytyp, "", product);
+
+                            }
+                            // }
 
                         } catch (Exception e) {
                             msg("Event " + eventCount + " is bad. line=" + line + " error=" + e.getMessage());
                         }
 
-                        // msg(line);
-
-                        //
-                        // Limit how often we speak to the database to avoid
-                        // swamping it...
-                        //
-
                         // If we've already done as many requests this ms
-                        // as we're supposed to...
-                        if (transThisMs++ > tpThisPerMs) {
+                        // as we're supposed to, sleep...
+                        if (++transThisMs > tpThisPerMs) {
 
                             // Sleep until the MS has changed...
                             while (currentMs == System.currentTimeMillis()) {
@@ -610,7 +631,7 @@ public class Demo {
         try {
 
             if (args.length < 3) {
-                msg("Usage: TransportDemo hostnames purpose filename howmany credit weeks [SPEED|TPS] value");
+                msg("Usage: TransportDemo hostnames [USERS|RUN] filename howmany credit weeks [SPEED|TPS] value");
                 System.exit(1);
             }
 
@@ -661,13 +682,23 @@ public class Demo {
 
             Demo l = new Demo(hostnames, filename, (int) howMany);
 
-            if (purpose.equalsIgnoreCase("RESET")) {
+            if (purpose.equalsIgnoreCase("USERS")) {
 
                 l.reset(howMany, credit, tpMsOrSpeedup);
+
+                l.createUsers(howMany, credit, tpMsOrSpeedup);
 
             } else if (purpose.equalsIgnoreCase("RUN")) {
+                
+                if (l.hasTooFewUsers(howMany)) {
+                    
+                    l.reset(howMany, credit, tpMsOrSpeedup);
 
-                l.reset(howMany, credit, tpMsOrSpeedup);
+                    l.createUsers(howMany, credit, tpMsOrSpeedup);
+                    
+                }
+
+                l.freeSpace();
 
                 l.load(weeks, tpMsOrSpeedup, isTps);
 
@@ -685,5 +716,7 @@ public class Demo {
         }
 
     }
+
+   
 
 }

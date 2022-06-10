@@ -69,8 +69,6 @@ CREATE INDEX tu_ix1 ON transport_user(active_subway_event_start);
 echo Index used by subway_starts_by_min
 CREATE INDEX tu_ix2 ON transport_user(truncate(minute, active_subway_event_start));
 
-echo Index used by subway_starts_by_hour
-CREATE INDEX tu_ix3 ON transport_user(truncate(hour, active_subway_event_start));
 
 echo Index used to track purchase
 CREATE INDEX tu_ix4 ON transport_user(truncate(minute, last_spend_finevent_date));
@@ -121,6 +119,7 @@ CREATE TABLE transport_user_subway_event
 	,start_station VARCHAR(30) 
     ,end_station VARCHAR(30)  
     ,duration_seconds INT NOT NULL
+    ,subsystem_name varchar(15) not null
     ,CONSTRAINT tuse_pk PRIMARY KEY (user_id, event_id,event_timestamp)
 	);
 	
@@ -165,13 +164,15 @@ GROUP BY truncate(minute, active_subway_event_start);
 
 create index sbbm_ix1 on subway_starts_by_min(event_time);
 
-CREATE view subway_starts_by_hour AS
-SELECT truncate(hour, active_subway_event_start) event_time,  count(*) boardings_this_hour
-FROM   transport_user
-WHERE active_subway_event IS NOT NULL
-GROUP BY truncate(hour, active_subway_event_start);
 
-create index sbbh_ix1 on subway_starts_by_hour(event_time);
+
+create view subsystem_activity as
+select subsystem_name, truncate(minute, event_timestamp) event_minute, count(*) how_many
+from transport_user_subway_event group by subsystem_name, truncate(minute, event_timestamp) ;
+
+create index ssa_ix1 on subsystem_activity(event_minute);
+
+
 
 CREATE view subway_ends_by_min AS
 SELECT truncate(minute, event_timestamp) event_time,  count(*) ends_this_min
@@ -195,14 +196,6 @@ group by start_station, end_station, truncate(minute,event_timestamp) ;
 
 create index sabm_ix1 on subway_activity_by_minute (event_minute,start_station, end_station);
 
-create view subway_activity_by_hour as
-select start_station, end_station, truncate(hour,event_timestamp) event_hour, count(*) how_many 
-from transport_user_subway_event
-group by start_station, end_station, truncate(hour,event_timestamp) ;
-
-create index sabh_ix1 on subway_activity_by_hour (event_hour) ;
-
-
 create view subway_board_activity_by_minute as
 select start_station, truncate(minute,event_timestamp) event_minute, count(*) how_many 
 from transport_user_subway_event
@@ -224,27 +217,12 @@ group by busroute, truncate(minute, event_timestamp) ;
 
 create index bebm_ix1 on  bus_event_by_minute (event_minute, busroute);
 
-create view bus_event_by_hour as
-select busroute, truncate(hour, event_timestamp) event_hour, count(*) how_many
-from transport_user_bus_event
-group by busroute, truncate(hour, event_timestamp) ;
-
-create index bebh_ix1 on  bus_event_by_hour (event_hour, busroute);
-
 create view bus_event_total_by_minute as
 select  truncate(minute, event_timestamp) event_minute, count(*) how_many
 from transport_user_bus_event
 group by  truncate(minute, event_timestamp) ;
 
 create index betbm_ix1 on  bus_event_total_by_minute (event_minute);
-
-create view bus_event_total_by_hour as
-select  truncate(hour, event_timestamp) event_hour, count(*) how_many
-from transport_user_bus_event
-group by  truncate(hour, event_timestamp) ;
-
-create index betbh_ix1 on  bus_event_total_by_hour (event_hour);
-
 
 create view total_swipes as select sum(swipecount) total_swipes, count(*) user_count from transport_user;
 
@@ -327,6 +305,15 @@ CREATE PROCEDURE
    FROM CLASS trandemo.server.QueryUser;
    
 create procedure  FROM CLASS trandemo.server.MeasureThroughput;
+
+CREATE PROCEDURE FreeSpace AS
+BEGIN
+--
+DELETE FROM event_dup_check;
+DELETE FROM transport_user_subway_event;
+DELETE FROM transport_user_bus_event;
+-- 
+END;
 
 CREATE PROCEDURE ReportStats__promBL AS
 BEGIN
@@ -411,14 +398,4 @@ END;
 END_OF_PROC
       
 
-drop view subway_starts_by_hour;
-
-drop view subway_activity_by_hour;
-
-drop view bus_event_by_hour;
-
-drop view bus_event_total_by_hour;
-
-
 file subwayfares.sql	
-      

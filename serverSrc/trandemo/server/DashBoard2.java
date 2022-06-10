@@ -86,6 +86,12 @@ public class DashBoard2 extends VoltProcedure {
             + "GROUP BY  end_station, latitude, longitude  "
             + "ORDER BY sum_how_many  DESC, end_station LIMIT ?; ");
 
+    public static final SQLStmt getBusiestSubsystems = new SQLStmt("SELECT subsystem_name, sum(how_many) sum_how_many  "
+            + "FROM subsystem_activity  "
+            + "WHERE event_minute BETWEEN ? AND ? "
+            + "GROUP BY  subsystem_name "
+            + "ORDER BY sum_how_many  DESC, subsystem_name; ");
+
 
 
 
@@ -135,6 +141,8 @@ public class DashBoard2 extends VoltProcedure {
 
         voltQueueSQL(getBusiestStartStations, currentStartMinute, currentEndMinute, howMany * 5);
         voltQueueSQL(getBusiestEndStations, currentStartMinute, currentEndMinute, howMany * 5);
+        
+        voltQueueSQL(getBusiestSubsystems, currentStartMinute, currentEndMinute);
 
         VoltTable[] firstResults = voltExecuteSQL();
 
@@ -155,11 +163,19 @@ public class DashBoard2 extends VoltProcedure {
         addSimTimeStats(firstResults[11]);
         addBusiestStations(firstResults[12], "starting");
         addBusiestStations(firstResults[13], "ending");
+        addSubsystems(firstResults[14]);
         addPercentileStats("client", wallPercentiles);
         addPercentileStats("server", serverPercentiles);
 
         return voltExecuteSQL(true);
 
+    }
+
+    private void addSubsystems(VoltTable subsystems) {
+        while (subsystems.advanceRow()) {
+            addStat("subsystem", subsystems.getString("subsystem_name"), null, subsystems.getLong("sum_how_many"));
+        }
+        
     }
 
     private void addPercentileStats(String kind, double[] percentiles) {

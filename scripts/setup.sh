@@ -1,15 +1,9 @@
 #!/bin/sh
 
-cd /home/ubuntu
+cd 
 
-sudo cat 127.0.0.1 vdb1 >> /etc/hosts
+AWSTYPE=` curl --connect-timeout 5 http://169.254.169.254/latest/meta-data/instance-type` 2> /dev/null
 
-echo vdb1 > .vdbhostnames  
-
-. ./.profile
-
-cd bin
-sh prometheusserver_configure.sh
 
 cd
 cd voltdb-subway/ddl
