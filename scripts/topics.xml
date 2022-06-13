@@ -1,6 +1,6 @@
 <topics enabled="true">
-<topic name="missing_subway_fares_topic"/>
-<topic name="transport_user_fraud_event_topic"/>
-<topic name="transport_user_financial_event_topic"/>
-<topic name="user_trip_outcomes_topic"/>
+<topic name="missing_subway_fares_topic" retention="1hr"/>
+<topic name="transport_user_fraud_event_topic" retention="1hr"/>
+<topic name="transport_user_financial_event_topic" retention="1hr"/>
+<topic name="user_trip_outcomes_topic" retention="1hr"/>
 </topics>
