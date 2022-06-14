@@ -1,5 +1,7 @@
 package trandemo.server;
 
+import java.util.Date;
+
 /* This file is part of VoltDB.
  * Copyright (C) 2008-2017 VoltDB Inc.
  *
@@ -92,7 +94,17 @@ public class DashBoard2 extends VoltProcedure {
             + "GROUP BY  subsystem_name "
             + "ORDER BY sum_how_many  DESC, subsystem_name; ");
 
+    public static final SQLStmt getoddOutcomes = new SQLStmt("select 'odd_outcomes' statname, outcome_message, count(*) stat_value "
+            + "    from trip_outcome_summary "
+            + "    where trip_time between ? and ? "
+            + "    group  by outcome_message;");
 
+    public static final SQLStmt getFraudOutcomes = new SQLStmt("select 'fraud' statname, EVENT_COMMENT, sum(fraud_events) fraud_events  "
+            + "from transport_user_fraud_event_summary "
+            + "where event_time between ? and ? "
+            + "group by EVENT_COMMENT;");
+
+   
 
 
     // @formatter:on
@@ -119,6 +131,8 @@ public class DashBoard2 extends VoltProcedure {
             currentEndMinute = times[0].getTimestampAsTimestamp("ET");
             latestTime = times[0].getTimestampAsTimestamp("LATEST_TIME");
         }
+        
+        TimestampType oneWeekAgo = new TimestampType(new Date(currentEndMinute.asExactJavaDate().getTime() - 86400 * 7 * 1000));
 
         //
         //
@@ -143,6 +157,8 @@ public class DashBoard2 extends VoltProcedure {
         voltQueueSQL(getBusiestEndStations, currentStartMinute, currentEndMinute, howMany * 5);
         
         voltQueueSQL(getBusiestSubsystems, currentStartMinute, currentEndMinute);
+        voltQueueSQL(getoddOutcomes, oneWeekAgo, currentEndMinute);
+        voltQueueSQL(getFraudOutcomes, oneWeekAgo, currentEndMinute);
 
         VoltTable[] firstResults = voltExecuteSQL();
 
@@ -164,11 +180,27 @@ public class DashBoard2 extends VoltProcedure {
         addBusiestStations(firstResults[12], "starting");
         addBusiestStations(firstResults[13], "ending");
         addSubsystems(firstResults[14]);
+        addOddOutcomes(firstResults[15]);
+        addFraudOutcomes(firstResults[16]);
         addPercentileStats("client", wallPercentiles);
         addPercentileStats("server", serverPercentiles);
 
         return voltExecuteSQL(true);
 
+    }
+
+    private void addFraudOutcomes(VoltTable outcomes) {
+        while (outcomes.advanceRow()) {
+            addStat("fraud", outcomes.getString("EVENT_COMMENT"), null, outcomes.getLong("fraud_events"));
+        }
+        
+    }
+
+    private void addOddOutcomes(VoltTable outcomes) {
+        while (outcomes.advanceRow()) {
+            addStat("odd", outcomes.getString("outcome_message"), null, outcomes.getLong("stat_value"));
+        }
+       
     }
 
     private void addSubsystems(VoltTable subsystems) {

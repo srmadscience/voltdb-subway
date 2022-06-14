@@ -78,7 +78,7 @@ public class CardSwipe extends VoltProcedure {
             "SELECT how_many, latest_event FROM transport_user_fraud_status WHERE user_id = ?;");
 
     public static final SQLStmt reportFraud = new SQLStmt(
-            "INSERT INTO transport_user_fraud_event (user_id,event_id ,event_timestamp,event_comment) VALUES (?,?,?,?);");
+            "INSERT INTO transport_user_fraud_event (user_id,event_id ,event_timestamp,event_comment,event_type) VALUES (?,?,?,?,?);");
 
     public static final SQLStmt logEvent = new SQLStmt(
             "INSERT INTO transport_user_subway_event (user_id, event_id,event_timestamp"
@@ -94,7 +94,8 @@ public class CardSwipe extends VoltProcedure {
     public static final SQLStmt reportMissingStationPair = new SQLStmt(
             "INSERT INTO missing_subway_fares (id,from_station_name, to_station_name) VALUES (?,?,?);");
     
-    public static final SQLStmt reportOutcome = new SQLStmt("INSERT INTO user_trip_outcomes (user_id, trip_time, outcome_code,outcome_message) VALUES (?,?,?,?);");
+    public static final SQLStmt reportOutcome = new SQLStmt("INSERT INTO user_trip_outcomes "
+            + "(user_id, trip_time, outcome_code,outcome_message) VALUES (?,?,?,?);");
 
     private static final long NO_CURRENT_JOURNEY = Long.MIN_VALUE;
 
@@ -188,9 +189,8 @@ public class CardSwipe extends VoltProcedure {
 
             if (fraudCount > ReferenceData.FRAUD_TOLERANCE) {
 
-                TimestampType latestFraud = userFraudRecord.getTimestampAsTimestamp("LATEST_EVENT");
                 reportFraud(userId, eventId, ReferenceData.STATUS_KNOWN_FRAUD,
-                        "Too many suspicious events. Last was at " + latestFraud.toString(), eventTime);
+                        "Too many suspicious events.", eventTime);
                 return null;
             }
 
@@ -205,8 +205,7 @@ public class CardSwipe extends VoltProcedure {
 
             if (inProgressJourneyId > 0) {
 
-                final String fraudMessage = userId + " attempted to board bus while already on train journey "
-                        + inProgressJourneyId;
+                final String fraudMessage = "Attempted to board bus while already on train journey";
                 reportFraud(userId, eventId, ReferenceData.STATUS_ON_ANOTHER_TRAIN, fraudMessage, eventTime);
                 return null;
 
@@ -218,7 +217,7 @@ public class CardSwipe extends VoltProcedure {
             if (currentBal < fareNeeded) {
 
                 reportUserEvent(userId, eventId, ReferenceData.STATUS_NO_MONEY,
-                        userId + " attempted to board bus that costs " + fareNeeded + " but only has " + currentBal,
+                        userId + "Attempted to board bus without enough money",
                         eventTime);
                 return null;
 
@@ -244,8 +243,7 @@ public class CardSwipe extends VoltProcedure {
             if (inProgressJourneyId != NO_CURRENT_JOURNEY) {
 
                 this.setAppStatusCode(ReferenceData.STATUS_ON_ANOTHER_TRAIN);
-                final String fraudMessage = userId + " attempted to board train while already on train journey "
-                        + inProgressJourneyId;
+                final String fraudMessage = "Attempted to board train while already on train journey";
                 reportFraud(userId, eventId, ReferenceData.STATUS_ON_ANOTHER_TRAIN, fraudMessage, eventTime);
                 return null;
 
@@ -256,7 +254,7 @@ public class CardSwipe extends VoltProcedure {
             String suspiciouslyFastCustomer = sanityCheck(userRecord, locationStation, eventTime);
             if (suspiciouslyFastCustomer != null) {
 
-                reportFraud(userId, eventId, ReferenceData.STATUS_MOVING_TOO_FAST, suspiciouslyFastCustomer.toString(),
+                reportFraud(userId, eventId, ReferenceData.STATUS_MOVING_TOO_FAST, suspiciouslyFastCustomer,
                         eventTime);
                 return null;
 
@@ -268,8 +266,7 @@ public class CardSwipe extends VoltProcedure {
             if (currentBal < fareNeeded) {
 
                 reportUserEvent(userId, eventId, ReferenceData.STATUS_NO_MONEY,
-                        userId + " attempted to board subway that will cost at least " + fareNeeded + " but only has "
-                                + currentBal,
+                        "Attempted to board subway that will cost at least " + fareNeeded + " with less than that",
                         eventTime);
                 return null;
 
@@ -291,7 +288,7 @@ public class CardSwipe extends VoltProcedure {
             if (userRecord.getString("LAST_DEP_STATION") == null) {
 
                 reportError(userId, eventId, ReferenceData.STATUS_NO_TRIP_STARTED,
-                        "Ended subway journey at " + locationStation + " but we don't know where they started from"
+                        "Exited at " + locationStation + ", without starting anywhere"
                              ,eventTime);
 
                 return null;
@@ -307,7 +304,7 @@ public class CardSwipe extends VoltProcedure {
 
                 reportUserEvent(userId, eventId,
                         ReferenceData.STATUS_NO_MONEY, "Attempted subway journey from " + startStation + " to "
-                                + locationStation + " that costs " + fareNeeded + " but only has " + currentBal,
+                                + locationStation + " without enough money",
                         eventTime);
                 return null;
 
@@ -367,7 +364,7 @@ public class CardSwipe extends VoltProcedure {
 
         this.setAppStatusCode(eventType);
         this.setAppStatusString("User=" + userId + " Event=" + eventId + " " + message);
-        voltQueueSQL(reportFraud, userId, eventId, eventTime, message);
+        voltQueueSQL(reportFraud, userId, eventId, eventTime, message,eventType);
         voltExecuteSQL();
     }
 

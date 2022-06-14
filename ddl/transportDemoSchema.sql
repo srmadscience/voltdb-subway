@@ -96,10 +96,17 @@ PARTITION ON COLUMN user_id
   EXPORT TO TOPIC transport_user_fraud_event_topic
 	(user_id BIGINT NOT NULL 
 	,event_id BIGINT NOT NULL
+	,event_type TINYINT NOT NULL
 	,event_timestamp TIMESTAMP NOT NULL
 	,event_comment VARCHAR(80)
 	);
 	
+CREATE VIEW transport_user_fraud_event_summary AS
+SELECT truncate(minute, event_timestamp) event_time, event_type,event_comment, count(*) fraud_events
+FROM   transport_user_fraud_event
+GROUP BY truncate(minute, event_timestamp), event_type,event_comment;
+
+create index tufes_ix1 on transport_user_fraud_event_summary(event_time);
 	
 CREATE STREAM transport_user_financial_event
 PARTITION ON COLUMN user_id 
@@ -148,7 +155,6 @@ PARTITION ON COLUMN user_id
 	,trip_time TIMESTAMP NOT NULL
 	,outcome_code INT NOT NULL
 	,outcome_message VARCHAR(800));
-	
 	
 
 CREATE view latest_subway_start_by_min AS
@@ -259,8 +265,8 @@ group by user_id;
 
 CREATE TABLE sim_stats
 (stat_name varchar(1024) not null 
-,stat_label_1 varchar(50)
-,stat_label_2 varchar(50)
+,stat_label_1 varchar(80)
+,stat_label_2 varchar(80)
 ,latitude float
 ,longitude float
 ,stat_value float not null
