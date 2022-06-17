@@ -3,4 +3,5 @@
 <topic name="transport_user_fraud_event_topic" retention="1hr"/>
 <topic name="transport_user_financial_event_topic" retention="1hr"/>
 <topic name="user_trip_outcomes_topic" retention="1hr"/>
+<topic name="general_price_change" procedure="UpdatePrices"/>
 </topics>

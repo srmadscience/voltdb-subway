@@ -25,9 +25,9 @@ do
 	gzip subwaytestfullweek.csv.?${i}
 done
 
-sudo service grafana start 2> /dev/null
-sudo service  voltdbprometheusbl start 2> /dev/null
-sudo service  voltdbprometheus start 2> /dev/null
+cd ../scripts
 
+cp Subway*json ../../bin/dashboards
+sh $HOME/bin/reload_dashboards.sh 
 
 

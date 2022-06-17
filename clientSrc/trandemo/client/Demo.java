@@ -9,6 +9,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
 
 import org.voltdb.VoltTable;
 import org.voltdb.client.Client;
@@ -106,12 +107,14 @@ public class Demo {
      * @throws ProcCallException
      * @throws InterruptedException
      */
-    private void createUsers(long howMany, long credit, int tpMs)
+    private void createUsers(long howMany, int credit, int tpMs)
             throws IOException, NoConnectionsException, ProcCallException, InterruptedException {
 
+        Random rand = new Random();
+        
         ComplainOnErrorCallback iuCallback = new ComplainOnErrorCallback();
 
-        msg("Creating " + howMany + " users each with credit of " + credit);
+        msg("Creating " + howMany + " users each with credit of between 0 and " + credit);
 
         long currentMs = System.currentTimeMillis();
         int tpThisMs = 0;
@@ -129,7 +132,7 @@ public class Demo {
                 tpThisMs = 0;
             }
 
-            mainClient.callProcedure(iuCallback, "UpdateCard", i, credit, "Y", startRun);
+            mainClient.callProcedure(iuCallback, "UpdateCard", i, rand.nextInt(credit), "Y", startRun);
 
             if (i % 10000 == 1) {
                 msg("Created " + i + " users...");
@@ -647,14 +650,14 @@ public class Demo {
             }
 
             long howMany = 5000000;
-            long credit = 10000;
+            int credit = 10000;
             int weeks = 1;
             boolean isTps = true;
             int tpMsOrSpeedup = 30;
 
             try {
                 howMany = Long.parseLong(args[3]);
-                credit = Long.parseLong(args[4]);
+                credit = Integer.parseInt(args[4]);
                 weeks = Integer.parseInt(args[5]);
                 if (args[6].equalsIgnoreCase("SPEED")) {
                     isTps = false;

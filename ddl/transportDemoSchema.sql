@@ -312,6 +312,10 @@ CREATE PROCEDURE
    
 create procedure  FROM CLASS trandemo.server.MeasureThroughput;
 
+CREATE PROCEDURE UpdatePrices AS
+UPDATE subway_fares 
+SET fare_in_pennies = fare_in_pennies * CAST(? AS FLOAT);
+
 CREATE PROCEDURE FreeSpace AS
 BEGIN
 --
