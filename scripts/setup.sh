@@ -30,4 +30,10 @@ cd ../scripts
 cp Subway*json ../../bin/dashboards
 sh $HOME/bin/reload_dashboards.sh 
 
+cd ../jars
+java -jar td_client.jar vdb1 USERS ../csv/subwaytestfullweek.csv 1000000 5000 1 SPEED 1
+
+cd ../ddl
+sqlcmd --servers=vdb1 < updateStations.sql 
+
 
