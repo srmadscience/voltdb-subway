@@ -111,7 +111,7 @@ public class Demo {
             throws IOException, NoConnectionsException, ProcCallException, InterruptedException {
 
         Random rand = new Random();
-        
+
         ComplainOnErrorCallback iuCallback = new ComplainOnErrorCallback();
 
         msg("Creating " + howMany + " users each with credit of between 0 and " + credit);
@@ -146,10 +146,10 @@ public class Demo {
         msg("All requests done...");
 
     }
-    
+
     private boolean hasTooFewUsers(long howMany) {
         try {
-            ClientResponse cr  = mainClient.callProcedure("@AdHoc", "SELECT COUNT(*) how_many FROM transport_user");
+            ClientResponse cr = mainClient.callProcedure("@AdHoc", "SELECT COUNT(*) how_many FROM transport_user");
             cr.getResults()[0].advanceRow();
             if (cr.getResults()[0].getLong("How_many") >= howMany) {
                 return false;
@@ -160,7 +160,7 @@ public class Demo {
         }
         return true;
     }
-    
+
     /**
      * Reset function
      * 
@@ -184,7 +184,6 @@ public class Demo {
         msg("Free Space Starting...");
         mainClient.callProcedure("FreeSpace");
         msg("Free Space Finished.");
-       
 
     }
 
@@ -358,7 +357,6 @@ public class Demo {
                                 // Mon,05:26,ENDTRIP,897114,LUL,Westminster,Z0102,TKT,N,0,0,LUL
                                 // Travelcard-Annual
 
-                               
                                 String endStation = lineContents[5].trim();
                                 String zvppt = lineContents[6];
                                 String jnytyp = lineContents[7];
@@ -417,6 +415,17 @@ public class Demo {
                 maxRowsPerFile = eventCount;
             }
 
+            // Fix bug where last latency stats become 'frozen' in Grafana...
+            try {
+                double[] clientStats = getEmptyLatencyStats();
+                double[] serverStats = getEmptyLatencyStats();
+                mainClient.drain();
+                mainClient.callProcedure("DashBoard2", 10, clientStats, serverStats);
+            } catch (InterruptedException | IOException | ProcCallException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+
         }
         return maxEventCount;
 
@@ -458,6 +467,18 @@ public class Demo {
                 result[i] = wallTime.getLatencyPct(DashBoard2.LATENCY_PERCENTILES[i]);
             }
 
+        }
+
+        return result;
+
+    }
+
+    private double[] getEmptyLatencyStats() {
+
+        double[] result = new double[DashBoard2.LATENCY_PERCENTILES.length];
+
+        for (int i = 0; i < DashBoard2.LATENCY_PERCENTILES.length; i++) {
+            result[i] = 0;
         }
 
         return result;
@@ -692,13 +713,13 @@ public class Demo {
                 l.createUsers(howMany, credit, tpMsOrSpeedup);
 
             } else if (purpose.equalsIgnoreCase("RUN")) {
-                
+
                 if (l.hasTooFewUsers(howMany)) {
-                    
+
                     l.reset(howMany, credit, tpMsOrSpeedup);
 
                     l.createUsers(howMany, credit, tpMsOrSpeedup);
-                    
+
                 }
 
                 l.freeSpace();
@@ -719,7 +740,5 @@ public class Demo {
         }
 
     }
-
-   
 
 }
