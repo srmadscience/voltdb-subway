@@ -1,0 +1,5 @@
+#!/bin/sh
+cd ../jars
+
+java -jar td_client.jar `cat $HOME/.vdbhostnames`  RUN ../csv/subwaytestfullweek.csv 1000000 50000 1 TPS 20
+
