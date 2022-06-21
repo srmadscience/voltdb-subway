@@ -1,4 +1,7 @@
 <topics enabled="true">
+<broker>
+    <property name="network.thread.count">8</property>
+</broker>
 <topic name="missing_subway_fares_topic" retention="1hr"/>
 <topic name="transport_user_fraud_event_topic" retention="1hr"/>
 <topic name="transport_user_financial_event_topic" retention="1hr"/>

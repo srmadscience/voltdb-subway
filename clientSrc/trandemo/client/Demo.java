@@ -276,6 +276,8 @@ public class Demo {
                                     }
                                 }
 
+                                mainClient.drain();
+                                
                                 ClientResponse updateTimeResponse = mainClient.callProcedure("UpdateSimulationTime",
                                         tripDate);
 
