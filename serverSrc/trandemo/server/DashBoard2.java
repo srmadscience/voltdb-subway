@@ -65,7 +65,7 @@ public class DashBoard2 extends VoltProcedure {
 
 
    // public static final SQLStmt getTotalCredit = new SQLStmt("select sum(credit) total_credit_gbp from transport_user_balance;");
-    public static final SQLStmt getbadOutcomes = new SQLStmt("select user_id, TRIP_TIME, OUTCOME_MESSAGE from trip_outcome_summary order by trip_time desc, user_id, outcome_code, outcome_message desc limit ?;");
+    public static final SQLStmt getbadOutcomeXs = new SQLStmt("select user_id, TRIP_TIME, OUTCOME_MESSAGE from trip_outcome_summary order by trip_time desc, user_id, outcome_code, outcome_message desc limit ?;");
 
     public static final SQLStmt getSubwayStationBoardsPerMin = new SQLStmt("select start_station, sum(how_many) sum_how_many from subway_board_activity_by_minute  where event_minute between ? and ? group by start_station  order by  sum(how_many) desc,start_station limit ?;");
     public static final SQLStmt getSubwayStationEndsPerMin = new SQLStmt("select end_station, sum(how_many) sum_how_many from subway_finish_activity_by_minute  where event_minute between ? and ? group by end_station  order by  sum(how_many)  desc, end_station limit ?;");
@@ -132,7 +132,7 @@ public class DashBoard2 extends VoltProcedure {
             latestTime = times[0].getTimestampAsTimestamp("LATEST_TIME");
         }
         
-        TimestampType oneWeekAgo = new TimestampType(new Date(currentEndMinute.asExactJavaDate().getTime() - 86400 * 7 * 1000));
+        TimestampType oneHourAgo = new TimestampType(new Date(currentEndMinute.asExactJavaDate().getTime() - 86400 * 7 * 1000));
 
         //
         //
@@ -149,7 +149,7 @@ public class DashBoard2 extends VoltProcedure {
         voltQueueSQL(getSpending, latestTime);
         voltQueueSQL(getPurchases, latestTime);
 
-        voltQueueSQL(getbadOutcomes, howMany);
+       // voltQueueSQL(getbadOutcomes, howMany);
 
         voltQueueSQL(getSimTime);
 
@@ -157,8 +157,8 @@ public class DashBoard2 extends VoltProcedure {
         voltQueueSQL(getBusiestEndStations, currentStartMinute, currentEndMinute, howMany * 5);
         
         voltQueueSQL(getBusiestSubsystems, currentStartMinute, currentEndMinute);
-        voltQueueSQL(getoddOutcomes, oneWeekAgo, currentEndMinute);
-        voltQueueSQL(getFraudOutcomes, oneWeekAgo, currentEndMinute);
+        voltQueueSQL(getoddOutcomes, oneHourAgo, currentEndMinute);
+        voltQueueSQL(getFraudOutcomes, oneHourAgo, currentEndMinute);
 
         VoltTable[] firstResults = voltExecuteSQL();
 
@@ -176,12 +176,12 @@ public class DashBoard2 extends VoltProcedure {
 
         addStat("subway_totals", "spending_per_minute", null, getValue("Spending", firstResults[8]));
         addStat("subway_totals", "purchases_per_minute", null, getValue("Purchases", firstResults[9]));
-        addSimTimeStats(firstResults[11]);
-        addBusiestStations(firstResults[12], "starting");
-        addBusiestStations(firstResults[13], "ending");
-        addSubsystems(firstResults[14]);
-        addOddOutcomes(firstResults[15]);
-        addFraudOutcomes(firstResults[16]);
+        addSimTimeStats(firstResults[10]);
+        addBusiestStations(firstResults[11], "starting");
+        addBusiestStations(firstResults[12], "ending");
+        addSubsystems(firstResults[13]);
+        addOddOutcomes(firstResults[14]);
+        addFraudOutcomes(firstResults[15]);
         addPercentileStats("client", wallPercentiles);
         addPercentileStats("server", serverPercentiles);
 

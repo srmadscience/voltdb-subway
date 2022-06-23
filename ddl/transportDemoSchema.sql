@@ -83,7 +83,7 @@ create table event_dup_check
 ,event_id BIGINT NOT NULL
 ,event_type VARCHAR(10) NOT NULL
 ,event_timestamp TIMESTAMP NOT NULL
-,CONSTRAINT edc_pk PRIMARY KEY (user_id,event_id, event_type));
+,CONSTRAINT edc_pk PRIMARY KEY (event_id,user_id, event_type));
 
 PARTITION TABLE event_dup_check ON COLUMN user_id;
 
@@ -93,7 +93,7 @@ CREATE INDEX edc_purge ON event_dup_check
 
 CREATE STREAM transport_user_fraud_event
 PARTITION ON COLUMN user_id 
-  EXPORT TO TOPIC transport_user_fraud_event_topic
+EXPORT TO TOPIC transport_user_fraud_event_topic
 	(user_id BIGINT NOT NULL 
 	,event_id BIGINT NOT NULL
 	,event_type TINYINT NOT NULL
@@ -110,7 +110,7 @@ create index tufes_ix1 on transport_user_fraud_event_summary(event_time);
 	
 CREATE STREAM transport_user_financial_event
 PARTITION ON COLUMN user_id 
-  EXPORT TO TOPIC transport_user_financial_event_topic
+EXPORT TO TOPIC transport_user_financial_event_topic
 	(user_id BIGINT NOT NULL 
 	,event_id BIGINT NOT NULL
 	,event_timestamp TIMESTAMP NOT NULL
@@ -127,7 +127,7 @@ CREATE TABLE transport_user_subway_event
     ,end_station VARCHAR(30)  
     ,duration_seconds INT NOT NULL
     ,subsystem_name varchar(15) not null
-    ,CONSTRAINT tuse_pk PRIMARY KEY (user_id, event_id,event_timestamp)
+    ,CONSTRAINT tuse_pk PRIMARY KEY (event_id,user_id, event_timestamp)
 	);
 	
 PARTITION TABLE transport_user_subway_event ON COLUMN user_id;
@@ -141,7 +141,7 @@ create table transport_user_bus_event(user_id BIGINT NOT NULL
 	,event_id BIGINT NOT NULL
 	,busroute varchar(10) NOT NULL 
 	,event_timestamp TIMESTAMP NOT NULL
-	,CONSTRAINT be_pk PRIMARY KEY (user_id, event_id));
+	,CONSTRAINT be_pk PRIMARY KEY (event_id,user_id));
 
 PARTITION TABLE transport_user_bus_event ON COLUMN user_id;
 
@@ -150,7 +150,7 @@ create index tube_ix1 on transport_user_bus_event (event_timestamp,user_id, even
 
 create stream user_trip_outcomes
 PARTITION ON COLUMN user_id 
-  EXPORT TO TOPIC user_trip_outcomes_topic
+EXPORT TO TOPIC user_trip_outcomes_topic
 	(user_id BIGINT NOT NULL 
 	,trip_time TIMESTAMP NOT NULL
 	,outcome_code INT NOT NULL
@@ -193,7 +193,7 @@ select start_station, end_station, count(*) how_many , max(duration_seconds) max
 from transport_user_subway_event
 group by start_station, end_station;
 
-create index tuse_ix1 on transport_user_subway_event (start_station, end_station);
+create index tuse_ix1 on transport_user_subway_event (start_station, end_station,duration_seconds);
 
 create view subway_activity_by_minute as
 select start_station, end_station, truncate(minute,event_timestamp) event_minute, count(*) how_many 
@@ -245,7 +245,9 @@ from user_trip_outcomes
 where outcome_code < 0
 group by user_id, trip_time, outcome_code, outcome_message;
 
-create index tos_idx1 on trip_outcome_summary(user_id, trip_time);
+create index tos_idx1 on trip_outcome_summary(user_id, trip_time,outcome_code, outcome_message);
+	
+create index tos_idx2 on trip_outcome_summary( trip_time);
 	
 create view transport_user_balance as
 select user_id, count(*) how_many, sum(credit_adjustment) credit, max(event_timestamp) last_event

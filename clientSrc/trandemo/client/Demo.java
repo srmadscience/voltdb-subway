@@ -51,6 +51,7 @@ import trandemo.server.ReferenceData;
 public class Demo {
 
     private static final int DEFAULT_TPS_PER_MS = 20;
+    private static final int DASHBOARD_INTERVAL_MS = 5000;
     SimpleDateFormat df1 = new SimpleDateFormat("yyyy-MM-dd");
     SimpleDateFormat parseFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm");
     final String dayOfYear = df1.format(new Date(System.currentTimeMillis()));
@@ -198,6 +199,9 @@ public class Demo {
      */
     public int load(int weeks, int tpmsOrSpeedup, boolean isTps) {
 
+        long lastDashboardTime = 0;
+        long lastClockTime = 0;
+        
         long currentTpmsOrSpeedup = tpmsOrSpeedup;
         boolean currentIsTps = isTps;
 
@@ -257,6 +261,12 @@ public class Demo {
                                 day = setDayOfWeek(lineContents[0], weekCount);
                                 lastDaySeen = today;
                                 msg("Day is " + lastDaySeen);
+
+//                               mainClient.callProcedure("@AdHoc",
+//                                       "delete from transport_user_bus_event;");
+//                               mainClient.callProcedure("@AdHoc",
+//                                       "delete from transport_user_subway_event;");
+                               
                             }
 
                             Date tripDate = getDate(lineContents[1], weekCount, day);
@@ -278,30 +288,36 @@ public class Demo {
 
                                 mainClient.drain();
                                 
-                                ClientResponse updateTimeResponse = mainClient.callProcedure("UpdateSimulationTime",
-                                        tripDate);
 
-                                // See if speed has changed...
-                                VoltTable speedTable = updateTimeResponse.getResults()[2];
-                                speedTable.advanceRow();
+                                if (lastDashboardTime + DASHBOARD_INTERVAL_MS < System.currentTimeMillis()) {
+                                    
+                                    lastDashboardTime = System.currentTimeMillis();
+                                    
+                                    ClientResponse updateTimeResponse = mainClient.callProcedure("UpdateSimulationTime",
+                                            tripDate);
 
-                                if (currentIsTps && speedTable.getString("TPS_OR_SPEED").equals("SPEED")) {
-                                    msg("Simulation Mode changed to SPEED");
-                                    currentIsTps = false;
-                                }
+                                    // See if speed has changed...
+                                    VoltTable speedTable = updateTimeResponse.getResults()[2];
+                                    speedTable.advanceRow();
 
-                                else if ((!currentIsTps) && speedTable.getString("TPS_OR_SPEED").equals("TPS")) {
-                                    msg("Simulation Mode changed to TPS");
-                                    currentIsTps = true;
-                                }
+                                    if (currentIsTps && speedTable.getString("TPS_OR_SPEED").equals("SPEED")) {
+                                        msg("Simulation Mode changed to SPEED");
+                                        currentIsTps = false;
+                                    }
 
-                                if (currentTpmsOrSpeedup != speedTable.getLong("NUMBER_VALUE")) {
-                                    currentTpmsOrSpeedup = speedTable.getLong("NUMBER_VALUE");
-                                    msg("Simulation Speed changed to " + currentTpmsOrSpeedup);
+                                    else if ((!currentIsTps) && speedTable.getString("TPS_OR_SPEED").equals("TPS")) {
+                                        msg("Simulation Mode changed to TPS");
+                                        currentIsTps = true;
+                                    }
 
-                                }
+                                    if (currentTpmsOrSpeedup != speedTable.getLong("NUMBER_VALUE")) {
+                                        currentTpmsOrSpeedup = speedTable.getLong("NUMBER_VALUE");
+                                        msg("Simulation Speed changed to " + currentTpmsOrSpeedup);
 
-                                if (lineContents[1].endsWith(":00")) {
+                                    }
+
+                                    
+                                    
                                     msg("Time is : " + lineContents[1] + " eventcount=" + eventCount);
 
                                     double[] clientStats = getAndStoreClientLatencyStats(shc);
@@ -312,6 +328,7 @@ public class Demo {
 
                                     shc.clear("WALL_TIME_OK");
                                 }
+                                
                                 lastTimeSeen = tripDate;
                                 startOfThisMinute = System.currentTimeMillis();
 
@@ -422,6 +439,7 @@ public class Demo {
                 double[] clientStats = getEmptyLatencyStats();
                 double[] serverStats = getEmptyLatencyStats();
                 mainClient.drain();
+              
                 mainClient.callProcedure("DashBoard2", 10, clientStats, serverStats);
             } catch (InterruptedException | IOException | ProcCallException e) {
                 // TODO Auto-generated catch block

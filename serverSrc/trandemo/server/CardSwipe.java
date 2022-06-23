@@ -23,14 +23,13 @@ package trandemo.server;
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-
 import org.voltdb.SQLStmt;
 import org.voltdb.VoltProcedure;
 import org.voltdb.VoltTable;
 import org.voltdb.types.TimestampType;
 
 public class CardSwipe extends VoltProcedure {
-    
+
  // @formatter:off
 
     public static final SQLStmt getUser = new SQLStmt("SELECT * FROM transport_user WHERE id = ?;");
@@ -101,7 +100,7 @@ public class CardSwipe extends VoltProcedure {
 
  
  // @formatter:on
-    
+
     public VoltTable[] run(long userId, long eventId, String eventType, TimestampType eventTime, String subsystem,
             String locationStation, String oysterCardZones, String jnyTyp, String busRouteId, String finalProduct)
             throws VoltAbortException {
@@ -109,7 +108,8 @@ public class CardSwipe extends VoltProcedure {
         if (!eventType.equals(ReferenceData.BUS_EVENT) && !eventType.equals(ReferenceData.STARTSUBWAY_EVENT)
                 && !eventType.equals(ReferenceData.ENDSUBWAY_EVENT)) {
 
-            reportError(userId, eventId, ReferenceData.STATUS_UNKNOWN_EVENT, "Event " + eventType + " not known",eventTime);
+            reportError(userId, eventId, ReferenceData.STATUS_UNKNOWN_EVENT, "Event " + eventType + " not known",
+                    eventTime);
             return null;
         }
 
@@ -137,7 +137,7 @@ public class CardSwipe extends VoltProcedure {
 
         // 1. Check to see if we know about this user
         if (!userRecord.advanceRow()) {
-            reportError(userId, eventId, ReferenceData.STATUS_UNKNOWN_USER, "User " + userId + " not known",eventTime);
+            reportError(userId, eventId, ReferenceData.STATUS_UNKNOWN_USER, "User " + userId + " not known", eventTime);
             return null;
         }
 
@@ -145,14 +145,14 @@ public class CardSwipe extends VoltProcedure {
         // avoid double charging
         if (dupcheckRecord.advanceRow()) {
             reportError(userId, eventId, ReferenceData.STATUS_DUPLICATE_EVENT,
-                    "Event " + eventId + "/" + eventType + " already processed",eventTime);
+                    "Event " + eventId + "/" + eventType + " already processed", eventTime);
             return null;
         }
 
         // 3. Sanity check other fields
         if (!subsystemRecord.advanceRow()) {
             reportError(userId, eventId, ReferenceData.STATUS_UNKNOWN_SUBSYSTEM,
-                    "Subsystem '" + subsystem + "' not known",eventTime);
+                    "Subsystem '" + subsystem + "' not known", eventTime);
             return null;
         }
 
@@ -161,13 +161,13 @@ public class CardSwipe extends VoltProcedure {
             if (eventType.equals(ReferenceData.BUS_EVENT)) {
 
                 reportError(userId, eventId, ReferenceData.STATUS_UNKNOWN_BUSROUTE,
-                        "Bus Route '" + busRouteId + "' not known",eventTime);
+                        "Bus Route '" + busRouteId + "' not known", eventTime);
                 return null;
 
             } else {
 
                 reportError(userId, eventId, ReferenceData.STATUS_UNKNOWN_STATION,
-                        "Station '" + locationStation + "' not known",eventTime);
+                        "Station '" + locationStation + "' not known", eventTime);
                 return null;
             }
         }
@@ -176,7 +176,7 @@ public class CardSwipe extends VoltProcedure {
         long currentBal = 0;
 
         if (!userCreditRecord.advanceRow()) {
-            reportError(userId, eventId, ReferenceData.STATUS_NO_FININFO, "No credit info found",eventTime);
+            reportError(userId, eventId, ReferenceData.STATUS_NO_FININFO, "No credit info found", eventTime);
             return null;
 
         } else {
@@ -189,8 +189,8 @@ public class CardSwipe extends VoltProcedure {
 
             if (fraudCount > ReferenceData.FRAUD_TOLERANCE) {
 
-                reportFraud(userId, eventId, ReferenceData.STATUS_KNOWN_FRAUD,
-                        "Too many suspicious events.", eventTime);
+                reportFraud(userId, eventId, ReferenceData.STATUS_KNOWN_FRAUD, "Too many suspicious events.",
+                        eventTime);
                 return null;
             }
 
@@ -217,8 +217,7 @@ public class CardSwipe extends VoltProcedure {
             if (currentBal < fareNeeded) {
 
                 reportUserEvent(userId, eventId, ReferenceData.STATUS_NO_MONEY,
-                        userId + "Attempted to board bus without enough money",
-                        eventTime);
+                        userId + "Attempted to board bus without enough money", eventTime);
                 return null;
 
             }
@@ -254,8 +253,7 @@ public class CardSwipe extends VoltProcedure {
             String suspiciouslyFastCustomer = sanityCheck(userRecord, locationStation, eventTime);
             if (suspiciouslyFastCustomer != null) {
 
-                reportFraud(userId, eventId, ReferenceData.STATUS_MOVING_TOO_FAST, suspiciouslyFastCustomer,
-                        eventTime);
+                reportFraud(userId, eventId, ReferenceData.STATUS_MOVING_TOO_FAST, suspiciouslyFastCustomer, eventTime);
                 return null;
 
             }
@@ -288,8 +286,7 @@ public class CardSwipe extends VoltProcedure {
             if (userRecord.getString("LAST_DEP_STATION") == null) {
 
                 reportError(userId, eventId, ReferenceData.STATUS_NO_TRIP_STARTED,
-                        "Exited at " + locationStation + ", without starting anywhere"
-                             ,eventTime);
+                        "Exited at " + locationStation + ", without starting anywhere", eventTime);
 
                 return null;
 
@@ -298,14 +295,12 @@ public class CardSwipe extends VoltProcedure {
             // See if enough credit exists
 
             String startStation = userRecord.getString("LAST_DEP_STATION");
-            long fareNeeded = getSubwayFare(userId,startStation, locationStation);
+            long fareNeeded = getSubwayFare(userId, startStation, locationStation);
 
             if (currentBal < fareNeeded) {
 
-                reportUserEvent(userId, eventId,
-                        ReferenceData.STATUS_NO_MONEY, "Attempted subway journey from " + startStation + " to "
-                                + locationStation + " without enough money",
-                        eventTime);
+                reportUserEvent(userId, eventId, ReferenceData.STATUS_NO_MONEY, "Attempted subway journey from "
+                        + startStation + " to " + locationStation + " without enough money", eventTime);
                 return null;
 
             }
@@ -316,21 +311,19 @@ public class CardSwipe extends VoltProcedure {
 
             long durationSecs = ((eventTime.getTime() / 1000) - tripStart) / 1000;
 
-            endSubwayEvent(userId, eventId, startStation, locationStation, durationSecs, eventTime,subsystem);
+            endSubwayEvent(userId, eventId, startStation, locationStation, durationSecs, eventTime, subsystem);
 
             reportUserEvent(userId, eventId, ReferenceData.STATUS_OK, "Subway Exit OK", eventTime);
 
         } else {
 
             reportError(userId, eventId, ReferenceData.STATUS_UNKNOWN_EVENT,
-                    "Unknown event type of '" + eventType + "' seen.",eventTime);
+                    "Unknown event type of '" + eventType + "' seen.", eventTime);
 
             return null;
         }
 
         voltQueueSQL(insertDuplicateEvent, userId, eventId, eventType, eventTime);
-        
-        
 
         return voltExecuteSQL(true);
     }
@@ -346,7 +339,7 @@ public class CardSwipe extends VoltProcedure {
 
         this.setAppStatusCode(eventType);
         this.setAppStatusString("User=" + userId + " Event=" + eventId + " " + message);
-        voltQueueSQL(reportOutcome,userId,eventTime,eventType,message);
+        voltQueueSQL(reportOutcome, userId, eventTime, eventType, message);
         voltExecuteSQL();
 
     }
@@ -355,7 +348,7 @@ public class CardSwipe extends VoltProcedure {
 
         this.setAppStatusCode(eventType);
         this.setAppStatusString("User=" + userId + " Event=" + eventId + " " + message);
-        voltQueueSQL(reportOutcome,userId,eventTime,eventType,message);
+        voltQueueSQL(reportOutcome, userId, eventTime, eventType, message);
         voltExecuteSQL();
 
     }
@@ -364,7 +357,7 @@ public class CardSwipe extends VoltProcedure {
 
         this.setAppStatusCode(eventType);
         this.setAppStatusString("User=" + userId + " Event=" + eventId + " " + message);
-        voltQueueSQL(reportFraud, userId, eventId, eventTime, message,eventType);
+        voltQueueSQL(reportFraud, userId, eventId, eventTime, message, eventType);
         voltExecuteSQL();
     }
 
@@ -372,15 +365,16 @@ public class CardSwipe extends VoltProcedure {
             long durationSecs, TimestampType eventTime, String subsystem) {
 
         voltQueueSQL(updUserEndTrip, eventTime, locationStation, userId);
-        voltQueueSQL(logEvent, userId, eventId, eventTime, startStation, locationStation, durationSecs,subsystem);
+        voltQueueSQL(logEvent, userId, eventId, eventTime, startStation, locationStation, durationSecs, subsystem);
         voltExecuteSQL();
 
     }
 
     /**
      * Checks to see if it's possible for the user to be at locationStation, based
-     * on where & when  he last got off the network, and how long we know it takes
-     * to get from the last station he was at to this one..
+     * on where & when he last got off the network, and how long we know it takes to
+     * get from the last station he was at to this one..
+     * 
      * @param userRecord
      * @param locationStation
      * @param eventTime
@@ -397,12 +391,12 @@ public class CardSwipe extends VoltProcedure {
         if (lastTime != null) {
 
             long secondsSinceLastJourney = (eventTime.getTime() - lastTime.getTime()) / 1000;
-            
+
             if (secondsSinceLastJourney < 7200) {
 
                 // if he last used the system less than 2 hours ago find out how long it would
                 // take us to get from his last station to this station. We then multiply that
-                // time by MINIMUM_TRIP_FUDGE_FACTOR. 
+                // time by MINIMUM_TRIP_FUDGE_FACTOR.
                 voltQueueSQL(checkMinTimes, userRecord.getLong("ID"), locationStation);
                 VoltTable[] scrResults = voltExecuteSQL();
 
@@ -419,7 +413,7 @@ public class CardSwipe extends VoltProcedure {
                             scr = "Took " + secondsSinceLastJourney + " to get from " + otherStation + " to "
                                     + locationStation;
                         }
-                    } 
+                    }
                 }
             }
         }
@@ -442,8 +436,7 @@ public class CardSwipe extends VoltProcedure {
         voltQueueSQL(charge, userId, eventId, eventTime, (fareNeeded * -1), closingCredit,
                 description + " " + oysterCardZones);
         voltQueueSQL(updUserLastFinEvent, eventTime, (fareNeeded * -1), userId);
-        
-        
+
         voltExecuteSQL();
     }
 
