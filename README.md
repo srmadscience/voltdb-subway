@@ -1,3 +1,6 @@
+<img title="Volt Active Data" alt="Volt Active Data Logo" src="http://52.210.27.140:8090/voltdb-awswrangler-servlet/VoltActiveData.png">
+
+
 # README #
 
 This README explains how to use this demo
