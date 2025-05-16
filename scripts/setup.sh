@@ -30,7 +30,7 @@ done
 
 cd ../scripts
 
-cp Subway*json ../../bin/dashboards
+cp voltdb-subway.json ../../bin/dashboards
 sh $HOME/bin/reload_dashboards.sh 
 
 cd ../jars
