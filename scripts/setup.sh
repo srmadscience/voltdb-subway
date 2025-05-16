@@ -17,6 +17,10 @@ cd ../scripts
 
 java ${JVMOPTS}  -jar $HOME/bin/addtodeploymentdotxml.jar vdb1 deployment topics.xml
 
+cd ../scripts
+cp voltdb-subway.json ../../bin/dashboards
+sh $HOME/bin/reload_dashboards.sh 
+
 cd ../csv
 
 rm subwaytestfullweek.csv 2> /dev/null
@@ -27,11 +31,6 @@ do
 	cat subwaytestfullweek.csv.?${i} >> subwaytestfullweek.csv
 	gzip subwaytestfullweek.csv.?${i}
 done
-
-cd ../scripts
-
-cp voltdb-subway.json ../../bin/dashboards
-sh $HOME/bin/reload_dashboards.sh 
 
 cd ../jars
 java ${JVMOPTS}  -jar td_client.jar vdb1 USERS ../csv/subwaytestfullweek.csv 1000000 5000 1 SPEED 10
